@@ -590,7 +590,7 @@ export async function writeAttendance(
 
     const valueRanges = batchRes.data.valueRanges ?? [];
     const actualTeamId = String(valueRanges[0]?.values?.[0]?.[0] ?? '').trim();
-    if (actualTeamId !== teamId) {
+    if (actualTeamId.toLowerCase() !== teamId.toLowerCase()) {
       return {
         success: false,
         error: `Row position mismatch: Expected Team ID '${teamId}' at row ${rowIndex}, but found '${actualTeamId}'.`,
