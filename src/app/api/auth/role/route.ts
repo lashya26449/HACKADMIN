@@ -1,27 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { verifyServerAuth } from '@/lib/firebase/server-auth';
+
+async function handleRoleRequest(request: NextRequest) {
+  const result = await verifyServerAuth(request, '/api/auth/role');
+  if (!result.success) {
+    return NextResponse.json(
+      { error: result.error, code: result.code },
+      { status: result.status }
+    );
+  }
+
+  return NextResponse.json({
+    role: result.user.role,
+    uid: result.user.uid,
+    email: result.user.email,
+  });
+}
 
 export async function GET(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return handleRoleRequest(request);
+}
 
-    const token = authHeader.split('Bearer ')[1];
-    const adminAuth = getAdminAuth();
-    const decoded = await adminAuth.verifyIdToken(token);
-    
-    const db = getAdminFirestore();
-    const userDoc = await db.collection('users').doc(decoded.uid).get();
-    
-    let role = 'readonly_viewer';
-    if (userDoc.exists) {
-      role = userDoc.data()?.role ?? 'readonly_viewer';
-    }
-
-    return NextResponse.json({ role, uid: decoded.uid, email: decoded.email });
-  } catch (error) {
-    return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
-  }
+export async function POST(request: NextRequest) {
+  return handleRoleRequest(request);
 }

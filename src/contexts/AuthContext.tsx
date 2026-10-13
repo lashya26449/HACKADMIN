@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
   User,
   signInWithEmailAndPassword,
@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import type { UserRole } from '@/types';
+import { toast } from 'sonner';
 
 interface AuthContextValue {
   user: User | null;
@@ -17,68 +18,73 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  getIdToken: (forceRefresh?: boolean) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function determineRole(email: string): UserRole {
-  const normalized = email.toLowerCase();
-  if (normalized.includes('admin') || normalized.includes('super')) {
-    return 'super_admin';
-  }
-  if (normalized.includes('viewer') || normalized.includes('audit')) {
-    return 'readonly_viewer';
-  }
-  // Default to checkin_organizer: Never automatically promote unknown accounts to super_admin
-  return 'checkin_organizer';
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check local session state
-    if (typeof window !== 'undefined') {
-      const savedEmail = localStorage.getItem('auth_email');
-      const savedRole = localStorage.getItem('auth_role') as UserRole | null;
+  // Obtain a fresh Firebase ID token using the Firebase client SDK
+  const getIdToken = useCallback(async (forceRefresh = false): Promise<string | null> => {
+    const currentUser = auth.currentUser || user;
+    if (!currentUser) return null;
+    try {
+      return await currentUser.getIdToken(forceRefresh);
+    } catch (err) {
+      console.error('Failed to retrieve fresh Firebase ID token:', err);
+      return null;
+    }
+  }, [user]);
 
-      if (savedEmail) {
-        const currentUser = {
-          uid: `user_${savedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-          email: savedEmail,
-          displayName: savedRole === 'checkin_organizer' ? 'Organizer' : 'Administrator',
-        } as User;
-        setUser(currentUser);
-        setRole(savedRole || determineRole(savedEmail));
-        document.cookie = 'session=active; path=/; max-age=86400; SameSite=Lax';
-        setLoading(false);
-        return;
-      }
+  useEffect(() => {
+    // Clean up any legacy localStorage demo/mock keys to prevent state desync
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_email');
+      localStorage.removeItem('auth_role');
+      localStorage.removeItem('demo_role');
+      localStorage.removeItem('demo_email');
     }
 
-    // Firebase Auth listener (if Firebase is initialized)
+    // Always wait for Firebase Auth to initialize via onAuthStateChanged
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         try {
+          const token = await firebaseUser.getIdToken();
           const res = await fetch('/api/auth/role', {
-            headers: { Authorization: `Bearer ${await firebaseUser.getIdToken()}` },
+            headers: { Authorization: `Bearer ${token}` },
           });
+
           if (res.ok) {
             const data = await res.json();
             setRole(data.role);
+            if (typeof document !== 'undefined') {
+              document.cookie = 'session=active; path=/; max-age=86400; SameSite=Lax';
+            }
           } else {
-            setRole(determineRole(firebaseUser.email || ''));
+            const errData = await res.json().catch(() => ({}));
+            const errMsg = errData.error || 'Access denied: role not provisioned.';
+            console.warn('[AuthContext] Role resolution failed:', errMsg);
+            toast.error(errMsg);
+            setRole(null);
+            if (typeof document !== 'undefined') {
+              document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+            }
           }
-        } catch {
-          setRole(determineRole(firebaseUser.email || ''));
+        } catch (err) {
+          console.error('[AuthContext] Error verifying role with server:', err);
+          setRole(null);
         }
       } else {
-        // If no stored email and no firebase user, user is unauthenticated
         setUser(null);
         setRole(null);
+        if (typeof document !== 'undefined') {
+          document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+        }
       }
       setLoading(false);
     });
@@ -91,30 +97,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!trimmedEmail) throw new Error('Email is required');
     if (!password) throw new Error('Password is required');
 
-    // Attempt Firebase sign-in if client credentials configured
-    try {
-      if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo') {
-        await signInWithEmailAndPassword(auth, trimmedEmail, password);
-        return;
-      }
-    } catch (firebaseErr: unknown) {
-      console.warn('Firebase sign-in fallback to organizer session:', firebaseErr);
+    // Authenticate strictly with Firebase client SDK
+    const cred = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+    const token = await cred.user.getIdToken(true);
+
+    // Verify role with server immediately
+    const res = await fetch('/api/auth/role', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const errMsg = errData.error || 'Access denied: User role document not found or disabled.';
+      // Sign out immediately if server rejects role
+      await firebaseSignOut(auth);
+      throw new Error(errMsg);
     }
 
-    // Direct organizer / admin session authentication
-    const userRole = determineRole(trimmedEmail);
-    const sessionUser = {
-      uid: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      email: trimmedEmail,
-      displayName: userRole === 'checkin_organizer' ? 'Organizer' : 'Administrator',
-    } as User;
+    const data = await res.json();
+    setUser(cred.user);
+    setRole(data.role);
 
-    setUser(sessionUser);
-    setRole(userRole);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_email', trimmedEmail);
-      localStorage.setItem('auth_role', userRole);
+    if (typeof document !== 'undefined') {
       document.cookie = 'session=active; path=/; max-age=86400; SameSite=Lax';
     }
   };
@@ -122,28 +126,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-    } catch {
-      // Ignored if purely local
+    } catch (err) {
+      console.warn('Firebase sign-out error:', err);
     }
     setUser(null);
     setRole(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_email');
-      localStorage.removeItem('auth_role');
-      document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    if (typeof document !== 'undefined') {
+      document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch {
-      // Safe no-op if local
-    }
+    const trimmed = email.trim();
+    if (!trimmed) throw new Error('Email is required');
+    await sendPasswordResetEmail(auth, trimmed);
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signIn, signOut, resetPassword }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        loading,
+        signIn,
+        signOut,
+        resetPassword,
+        getIdToken,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -152,14 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    return {
-      user: null,
-      role: null,
-      loading: false,
-      signIn: async () => {},
-      signOut: async () => {},
-      resetPassword: async () => {},
-    };
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return ctx;
 }

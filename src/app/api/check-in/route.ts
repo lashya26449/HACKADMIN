@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { verifyServerAuth } from '@/lib/firebase/server-auth';
 import {
   getTeamById, getSheetsConfig, claimOperation, checkIdempotency,
   saveOperation, appendAuditEntry, markTeamPresent
@@ -13,69 +14,33 @@ export async function POST(request: NextRequest) {
   const timestamp = new Date().toISOString();
 
   try {
-    // 1. Authenticate
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json<ApiResponse>({ success: false, error: 'Unauthorized', timestamp }, { status: 401 });
+    // 1. Authenticate & authorize using shared server-auth module
+    const authResult = await verifyServerAuth(request, '/api/check-in');
+    if (!authResult.success) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: authResult.error, timestamp },
+        { status: authResult.status }
+      );
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    
+    const { uid: organizerUid, email: organizerEmail, role: organizerRole } = authResult.user;
+
+    // 2. Enforce role permission boundaries: Read-only viewers cannot mark attendance
+    if (organizerRole === 'readonly_viewer') {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: 'Permission denied: Read-only viewers cannot mark attendance.', timestamp },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
-    const { teamId, idempotencyKey, source, rowIndex, executeLiveWrite, organizerEmail: clientEmail } = body as {
+    const { teamId, idempotencyKey, source, rowIndex, executeLiveWrite } = body as {
       teamId: string;
       idempotencyKey: string;
       source?: string;
       rowIndex?: number;
       executeLiveWrite?: boolean;
-      organizerEmail?: string;
     };
-
-    let organizerUid: string;
-    let organizerEmail: string;
-    let organizerRole: string;
-
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd && (token === 'demo' || token === 'session')) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Unauthorized: Production requests must provide a valid verified Firebase ID token.',
-        timestamp,
-      }, { status: 401 });
-    }
-
-    const isSimulated = !isProd && (isDemoMode() || !hasGoogleSheetsCredentials() || token === 'demo' || token === 'session' || !process.env.FIREBASE_ADMIN_PROJECT_ID);
-
-    if (isSimulated) {
-      organizerUid = 'organizer-session';
-      organizerEmail = clientEmail || request.headers.get('x-user-email') || 'Organizer';
-      organizerRole = 'checkin_organizer';
-    } else {
-      if (!process.env.FIREBASE_ADMIN_PROJECT_ID) {
-        return NextResponse.json<ApiResponse>({
-          success: false,
-          error: 'Server configuration error: Firebase Admin credentials not configured.',
-          timestamp,
-        }, { status: 500 });
-      }
-      const adminAuth = getAdminAuth();
-      const decoded = await adminAuth.verifyIdToken(token);
-      organizerUid = decoded.uid;
-      organizerEmail = decoded.email ?? 'Organizer';
-
-      // 2. Validate role strictly from Firestore users collection
-      const db = getAdminFirestore();
-      const userDoc = await db.collection('users').doc(organizerUid).get();
-      organizerRole = userDoc.data()?.role ?? 'readonly_viewer';
-    }
-
-    if (organizerRole === 'readonly_viewer') {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Permission denied: Read-only viewers cannot mark attendance.',
-        timestamp,
-      }, { status: 403 });
-    }
 
     if (!teamId || !idempotencyKey) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'Missing teamId or idempotencyKey', timestamp }, { status: 400 });
@@ -165,6 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Check idempotency (Demo or standard mode)
+    const isSimulated = isDemoMode();
     if (!isSimulated) {
       const existing = await checkIdempotency(idempotencyKey);
       if (existing) {

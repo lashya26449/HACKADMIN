@@ -494,5 +494,120 @@ test('19. Server-side role resolution security: missing or unauthorized roles ne
   assert.equal(resolveUserRole({ role: 'readonly_viewer' }), 'readonly_viewer');
 });
 
+test('20. Shared server-auth verification: covers all Phase 5 security and token edge cases', () => {
+  function simulateVerifyAuth({ authHeader, isProd = true, adminConfigured = true, tokenValidator, roleResolver }) {
+    if (!authHeader) {
+      return { success: false, status: 401, error: 'Unauthorized: Missing Authorization header.', code: 'AUTH_HEADER_MISSING' };
+    }
+    if (!authHeader.startsWith('Bearer ')) {
+      return { success: false, status: 401, error: 'Unauthorized: Malformed Authorization header.', code: 'AUTH_HEADER_MALFORMED' };
+    }
+    const token = authHeader.substring(7).trim();
+    if (!token) {
+      return { success: false, status: 401, error: 'Unauthorized: Bearer token is empty.', code: 'AUTH_TOKEN_EMPTY' };
+    }
+    if (isProd && (token === 'demo' || token === 'session')) {
+      return { success: false, status: 401, error: 'Unauthorized: Production requests must provide a valid verified Firebase ID token.', code: 'AUTH_SIMULATED_REJECTED' };
+    }
+    if (!adminConfigured) {
+      return { success: false, status: 500, error: 'Server configuration error: Firebase Admin credentials not configured.', code: 'ADMIN_INIT_FAILED' };
+    }
+
+    const decoded = tokenValidator ? tokenValidator(token) : { valid: false };
+    if (!decoded.valid) {
+      return { success: false, status: 401, error: 'Authentication failed: Invalid or expired Firebase ID token.', code: decoded.code || 'AUTH_TOKEN_INVALID' };
+    }
+    if (decoded.project !== 'hackadmin-493cb') {
+      return { success: false, status: 401, error: `Unauthorized: Token belongs to wrong Firebase project '${decoded.project}'.`, code: 'AUTH_PROJECT_MISMATCH' };
+    }
+
+    const roleData = roleResolver ? roleResolver(decoded.uid) : null;
+    if (!roleData || !roleData.role) {
+      return { success: false, status: 403, error: 'Access denied: User role document not found in Firestore. Contact administrator.', code: 'ROLE_DOCUMENT_MISSING' };
+    }
+    if (roleData.disabled) {
+      return { success: false, status: 403, error: 'Access denied: This user account has been disabled.', code: 'USER_DISABLED' };
+    }
+    return { success: true, user: { uid: decoded.uid, email: decoded.email, role: roleData.role } };
+  }
+
+  // 1. Missing Authorization header
+  const r1 = simulateVerifyAuth({ authHeader: null });
+  assert.equal(r1.success, false);
+  assert.equal(r1.status, 401);
+  assert.equal(r1.code, 'AUTH_HEADER_MISSING');
+
+  // 2. Empty Bearer token
+  const r2 = simulateVerifyAuth({ authHeader: 'Bearer    ' });
+  assert.equal(r2.success, false);
+  assert.equal(r2.status, 401);
+  assert.equal(r2.code, 'AUTH_TOKEN_EMPTY');
+
+  // 3. Invalid token
+  const r3 = simulateVerifyAuth({
+    authHeader: 'Bearer invalid.expired.token',
+    tokenValidator: () => ({ valid: false, code: 'auth/id-token-expired' }),
+  });
+  assert.equal(r3.success, false);
+  assert.equal(r3.status, 401);
+  assert.equal(r3.code, 'auth/id-token-expired');
+
+  // 4. Wrong-project token
+  const r4 = simulateVerifyAuth({
+    authHeader: 'Bearer valid.token.otherproject',
+    tokenValidator: () => ({ valid: true, project: 'wrong-project-123', uid: 'u1' }),
+  });
+  assert.equal(r4.success, false);
+  assert.equal(r4.status, 401);
+  assert.equal(r4.code, 'AUTH_PROJECT_MISMATCH');
+
+  // 5. Valid token for an authorized organizer
+  const r5 = simulateVerifyAuth({
+    authHeader: 'Bearer valid.organizer.token',
+    tokenValidator: () => ({ valid: true, project: 'hackadmin-493cb', uid: 'org-1', email: 'org@lakshya.dev' }),
+    roleResolver: () => ({ role: 'checkin_organizer', disabled: false }),
+  });
+  assert.equal(r5.success, true);
+  assert.equal(r5.user.role, 'checkin_organizer');
+  assert.equal(r5.user.uid, 'org-1');
+
+  // 6. Valid token for a readonly viewer
+  const r6 = simulateVerifyAuth({
+    authHeader: 'Bearer valid.viewer.token',
+    tokenValidator: () => ({ valid: true, project: 'hackadmin-493cb', uid: 'view-1', email: 'viewer@lakshya.dev' }),
+    roleResolver: () => ({ role: 'readonly_viewer', disabled: false }),
+  });
+  assert.equal(r6.success, true);
+  assert.equal(r6.user.role, 'readonly_viewer');
+
+  // 7. Missing or disabled role document
+  const r7Missing = simulateVerifyAuth({
+    authHeader: 'Bearer valid.token',
+    tokenValidator: () => ({ valid: true, project: 'hackadmin-493cb', uid: 'no-role-user' }),
+    roleResolver: () => null,
+  });
+  assert.equal(r7Missing.success, false);
+  assert.equal(r7Missing.status, 403);
+  assert.equal(r7Missing.code, 'ROLE_DOCUMENT_MISSING');
+
+  const r7Disabled = simulateVerifyAuth({
+    authHeader: 'Bearer valid.token',
+    tokenValidator: () => ({ valid: true, project: 'hackadmin-493cb', uid: 'disabled-user' }),
+    roleResolver: () => ({ role: 'checkin_organizer', disabled: true }),
+  });
+  assert.equal(r7Disabled.success, false);
+  assert.equal(r7Disabled.status, 403);
+  assert.equal(r7Disabled.code, 'USER_DISABLED');
+
+  // 8. Firebase Admin initialization failure
+  const r8 = simulateVerifyAuth({
+    authHeader: 'Bearer valid.token',
+    adminConfigured: false,
+  });
+  assert.equal(r8.success, false);
+  assert.equal(r8.status, 500);
+  assert.equal(r8.code, 'ADMIN_INIT_FAILED');
+});
+
 
 

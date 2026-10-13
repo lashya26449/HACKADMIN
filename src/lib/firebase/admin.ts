@@ -4,24 +4,56 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 let adminApp: App;
 
-function getAdminApp(): App {
-  if (getApps().length === 0) {
-    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    
-    if (!process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL || !privateKey) {
-      throw new Error('Firebase Admin credentials are not configured. Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY environment variables.');
-    }
+export function getFirebaseAdminConfig() {
+  const projectId =
+    process.env.FIREBASE_ADMIN_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    'hackadmin-493cb';
 
-    adminApp = initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        privateKey,
-      }),
-    });
-  } else {
-    adminApp = getApps()[0];
+  const clientEmail =
+    process.env.FIREBASE_ADMIN_CLIENT_EMAIL ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+
+  const rawKey =
+    process.env.FIREBASE_ADMIN_PRIVATE_KEY ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+
+  const privateKey = rawKey
+    ? rawKey
+        .trim()
+        .replace(/^["']|["']$/g, '') // strip surrounding quotes from Vercel UI
+        .replace(/\\n/g, '\n')
+        .replace(/\r/g, '')
+    : undefined;
+
+  return { projectId, clientEmail, privateKey };
+}
+
+function getAdminApp(): App {
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    return existingApps[0];
   }
+
+  const { projectId, clientEmail, privateKey } = getFirebaseAdminConfig();
+
+  if (!projectId || !clientEmail || !privateKey) {
+    const missing: string[] = [];
+    if (!projectId) missing.push('FIREBASE_ADMIN_PROJECT_ID');
+    if (!clientEmail) missing.push('FIREBASE_ADMIN_CLIENT_EMAIL (or GOOGLE_SERVICE_ACCOUNT_EMAIL)');
+    if (!privateKey) missing.push('FIREBASE_ADMIN_PRIVATE_KEY (or GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)');
+    throw new Error(`Firebase Admin credentials are not configured. Missing: ${missing.join(', ')}`);
+  }
+
+  adminApp = initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
+    projectId,
+  });
+
   return adminApp;
 }
 

@@ -14,7 +14,7 @@ import { trimTeamId, generateIdempotencyKey } from '@/lib/utils';
 import type { AuditEntry } from '@/types';
 
 export default function CheckInPage() {
-  const { user, role } = useAuth();
+  const { user, role, getIdToken } = useAuth();
   const { teams, loading, isOnline, updateTeamLocally, refreshTeams } = useTeams();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterValue>('all');
@@ -89,6 +89,12 @@ export default function CheckInPage() {
       return;
     }
 
+    const token = await getIdToken();
+    if (!token) {
+      toast.error('Authentication expired. Please sign in again.');
+      return;
+    }
+
     setProcessingTeamId(teamId);
 
     try {
@@ -97,15 +103,15 @@ export default function CheckInPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer session',
-          'x-user-email': user?.email || 'Administrator',
+          Authorization: `Bearer ${token}`,
+          'x-user-email': user?.email || 'Organizer',
         },
         body: JSON.stringify({
           teamId,
           idempotencyKey,
           rowIndex: rowIndex ?? team.rowIndex,
           executeLiveWrite: true,
-          organizerEmail: user?.email || 'Administrator',
+          organizerEmail: user?.email || 'Organizer',
         }),
       });
 
