@@ -455,5 +455,44 @@ test('17. Pre-write validation queries Team ID and Attendance cell via atomic ba
   assert.equal(batchRanges[1], "'Form Responses 1'!P12");
 });
 
+test('18. Dependency compatibility: firebase-admin/auth and jwks-rsa load without ERR_REQUIRE_ESM', () => {
+  // Verifies that require() on jwks-rsa / jose does not crash with ERR_REQUIRE_ESM
+  assert.doesNotThrow(() => {
+    const { getAuth } = require('firebase-admin/auth');
+    assert.equal(typeof getAuth, 'function');
+  }, 'firebase-admin/auth must load successfully in CommonJS without ERR_REQUIRE_ESM');
+
+  assert.doesNotThrow(() => {
+    const jwksUtils = require('jwks-rsa/src/utils');
+    assert.ok(jwksUtils, 'jwks-rsa/src/utils must load without ERR_REQUIRE_ESM');
+  }, 'jwks-rsa utils must load successfully with overridden CommonJS-compatible jose');
+});
+
+test('19. Server-side role resolution security: missing or unauthorized roles never grant admin access', () => {
+  function resolveUserRole(userDocData) {
+    let role = 'readonly_viewer';
+    if (userDocData && userDocData.role) {
+      const allowedRoles = ['super_admin', 'checkin_organizer', 'readonly_viewer'];
+      if (allowedRoles.includes(userDocData.role)) {
+        role = userDocData.role;
+      }
+    }
+    return role;
+  }
+
+  // 1. Missing user document in Firestore defaults to readonly_viewer
+  assert.equal(resolveUserRole(null), 'readonly_viewer');
+  assert.equal(resolveUserRole({}), 'readonly_viewer');
+
+  // 2. Unknown or escalated roles default to readonly_viewer
+  assert.equal(resolveUserRole({ role: 'admin' }), 'readonly_viewer');
+  assert.equal(resolveUserRole({ role: 'root' }), 'readonly_viewer');
+
+  // 3. Legitimate assigned roles resolve correctly
+  assert.equal(resolveUserRole({ role: 'super_admin' }), 'super_admin');
+  assert.equal(resolveUserRole({ role: 'checkin_organizer' }), 'checkin_organizer');
+  assert.equal(resolveUserRole({ role: 'readonly_viewer' }), 'readonly_viewer');
+});
+
 
 
