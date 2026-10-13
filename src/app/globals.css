@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #080808;
+  --foreground: #F0F0F0;
+  --secondary-bg: #101010;
+  --glass-panel: rgba(255, 255, 255, 0.045);
+  --glass-elevated: rgba(255, 255, 255, 0.065);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --primary-text: #F0F0F0;
+  --secondary-text: #B5B5B5;
+  --muted-text: #808080;
+  --disabled-text: #555555;
+  --input-bg: rgba(255, 255, 255, 0.035);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --focus-border: rgba(255, 255, 255, 0.35);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
 }
+
+.glass-panel {
+  background-color: var(--glass-panel);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+}
+
+.glass-elevated {
+  background-color: var(--glass-elevated);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+}
+
+.glass-input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--primary-text);
+}
+
+.glass-input:focus {
+  border-color: var(--focus-border);
+  outline: none;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-out {
+  animation: fade-out 0.15s ease-in;
+}
+
+.fade-in-0 { animation-name: fade-in; }
+.fade-out-0 { animation-name: fade-out; }
+
+@keyframes zoom-in {
+  from { transform: translate(-50%, -50%) scale(0.95); }
+  to { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes zoom-out {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(-50%, -50%) scale(0.95); }
+}
+
+.zoom-in-95 { animation-name: zoom-in; }
+.zoom-out-95 { animation-name: zoom-out; }
+
+@keyframes slide-in-from-top {
+  from { transform: translate(-50%, calc(-50% - 12px)); }
+  to { transform: translate(-50%, -50%); }
+}
+
+.slide-in-from-top-\[48\%\] { animation-name: slide-in-from-top; }
+.slide-out-to-top-\[48\%\] { animation-name: slide-in-from-top; animation-direction: reverse; }
+.slide-in-from-left-1\/2 { animation: none; }
+.slide-out-to-left-1\/2 { animation: none; }
