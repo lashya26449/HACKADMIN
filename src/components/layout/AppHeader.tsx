@@ -58,7 +58,6 @@ export function AppHeader() {
 
   const title = Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? 'HackAdmin';
   const isCheckInPage = pathname === '/admin/check-in';
-  const isSuperAdmin = role === 'super_admin';
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#080808]/90 px-4 md:px-6 backdrop-blur-xl z-20">
@@ -74,29 +73,64 @@ export function AppHeader() {
         <h1 className="text-xs font-medium text-[#B5B5B5] tracking-tight">{title}</h1>
       </div>
 
-      {/* If super admin on full-width check-in page, show nav shortcuts */}
-      {isCheckInPage && isSuperAdmin && (
-        <div className="hidden lg:flex items-center gap-1.5 ml-4 pl-4 border-l border-white/10 text-xs">
-          <Link
-            href="/admin/directory"
-            className="px-2.5 py-1 rounded-md text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04] transition-colors"
-          >
-            Directory
-          </Link>
-          <Link
-            href="/admin/id-cards"
-            className="px-2.5 py-1 rounded-md text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04] transition-colors"
-          >
-            ID Cards
-          </Link>
-          <Link
-            href="/admin/activity"
-            className="px-2.5 py-1 rounded-md text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04] transition-colors"
-          >
-            Activity
-          </Link>
-        </div>
-      )}
+      {/* Universal Navigation Shortcuts */}
+      <div className="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-white/10 text-xs">
+        <Link
+          href="/admin/check-in"
+          className={cn(
+            "px-2.5 py-1 rounded-md transition-colors",
+            pathname === '/admin/check-in'
+              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
+              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+          )}
+        >
+          Check-in
+        </Link>
+        <Link
+          href="/admin/payments"
+          className={cn(
+            "px-2.5 py-1 rounded-md transition-colors",
+            pathname.startsWith('/admin/payments')
+              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
+              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+          )}
+        >
+          Payments & UTR
+        </Link>
+        <Link
+          href="/admin/directory"
+          className={cn(
+            "px-2.5 py-1 rounded-md transition-colors",
+            pathname.startsWith('/admin/directory')
+              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
+              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+          )}
+        >
+          Directory
+        </Link>
+        <Link
+          href="/admin/id-cards"
+          className={cn(
+            "px-2.5 py-1 rounded-md transition-colors",
+            pathname.startsWith('/admin/id-cards')
+              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
+              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+          )}
+        >
+          ID Cards
+        </Link>
+        <Link
+          href="/admin/activity"
+          className={cn(
+            "px-2.5 py-1 rounded-md transition-colors",
+            pathname.startsWith('/admin/activity')
+              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
+              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+          )}
+        >
+          Activity
+        </Link>
+      </div>
 
       <div className="ml-auto flex items-center gap-3">
         {/* Live IST Clock */}

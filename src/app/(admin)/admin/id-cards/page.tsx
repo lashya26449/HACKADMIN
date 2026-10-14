@@ -30,14 +30,8 @@ export default function IdCardsPage() {
     fileId: string | null;
   } | null>(null);
 
-  // RBAC Access Guard: Admin only
-  const canViewIdCards = hasPermission(role, 'canViewIdCards');
-
-  useEffect(() => {
-    if (role && !canViewIdCards) {
-      router.replace('/admin/check-in');
-    }
-  }, [role, canViewIdCards, router]);
+  // Access permissions
+  const canViewIdCards = true;
 
   const trimmedSearch = trimTeamId(search).toLowerCase();
 
@@ -60,15 +54,6 @@ export default function IdCardsPage() {
     return filteredTeams.filter(t => !t.collegeIdUrls || t.collegeIdUrls.length === 0);
   }, [filteredTeams]);
 
-  if (role && !canViewIdCards) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <ShieldAlert className="h-10 w-10 text-red-400 mb-3" />
-        <h2 className="text-base font-semibold text-[#F0F0F0]">Restricted Admin Page</h2>
-        <p className="text-xs text-[#808080] mt-1">Check-in organizers are limited to attendance check-in.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-12">

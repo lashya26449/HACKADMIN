@@ -17,14 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, loading, router]);
 
-  // RBAC route protection: Check-in organizers can ONLY access /admin/check-in
-  useEffect(() => {
-    if (!loading && user && role === 'checkin_organizer') {
-      if (pathname !== '/admin/check-in') {
-        router.replace('/admin/check-in');
-      }
-    }
-  }, [user, role, loading, pathname, router]);
+
 
   const isCheckInPage = pathname === '/admin/check-in';
 
