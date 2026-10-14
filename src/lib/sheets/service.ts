@@ -183,6 +183,8 @@ export async function inspectAndMapHeaders(
   let emailStatusCol = '';
   let collegeIdCol = '';
   let paymentCol = '';
+  let utrCol = '';
+  let paymentScreenshotCol = '';
   let memberCountCol = '';
 
   rawHeaders.forEach((header, idx) => {
@@ -242,8 +244,19 @@ export async function inspectAndMapHeaders(
       attendanceCol = letter;
       purpose = 'Attendance Status';
     }
-    // 11. Payment
-    else if (/payment|transaction|utr|screenshot|receipt|fee/.test(norm)) {
+    // 11a. Payment Screenshot
+    else if (/screenshot|receipt|proof/.test(norm) || (norm.includes('payment') && (norm.includes('screenshot') || norm.includes('upload') || norm.includes('file')))) {
+      paymentScreenshotCol = letter;
+      purpose = 'Payment Screenshot';
+    }
+    // 11b. UTR Number
+    else if (/utr|transaction(\s*id|\s*no|\s*number)?|reference/.test(norm)) {
+      utrCol = letter;
+      if (!paymentCol) paymentCol = letter;
+      purpose = 'UTR Number';
+    }
+    // 11c. Generic Payment
+    else if (/payment|fee/.test(norm)) {
       if (!paymentCol) paymentCol = letter;
       purpose = 'Payment Info';
     }
@@ -280,6 +293,8 @@ export async function inspectAndMapHeaders(
       degreeColumn: degreeCol,
       collegeIdColumn: collegeIdCol,
       paymentColumn: paymentCol,
+      utrColumn: utrCol || paymentCol,
+      paymentScreenshotColumn: paymentScreenshotCol,
       memberCountColumn: memberCountCol,
       headerRow,
       dataStartRow: headerRow + 1,
@@ -367,6 +382,10 @@ export async function syncTeamsFromSheet(
   const emailStatusIdx = config.emailStatusColumn ? columnLetterToIndex(config.emailStatusColumn) : -1;
   const collegeIdIdx = config.collegeIdColumn ? columnLetterToIndex(config.collegeIdColumn) : -1;
   const paymentIdx = config.paymentColumn ? columnLetterToIndex(config.paymentColumn) : -1;
+  const utrColLetter = config.utrColumn || config.paymentColumn;
+  const utrIdx = utrColLetter ? columnLetterToIndex(utrColLetter) : -1;
+  const paymentScreenshotColLetter = config.paymentScreenshotColumn;
+  const paymentScreenshotIdx = paymentScreenshotColLetter ? columnLetterToIndex(paymentScreenshotColLetter) : -1;
   const memberCountIdx = config.memberCountColumn ? columnLetterToIndex(config.memberCountColumn) : -1;
 
   const seenIds = new Map<string, number[]>();
@@ -393,7 +412,29 @@ export async function syncTeamsFromSheet(
       ? rawCollegeId.split(/[\s,;|\n]+/).filter(u => u.startsWith('http'))
       : [];
 
-    const paymentVal = paymentIdx >= 0 ? String(row[paymentIdx] ?? '').trim() : '';
+    const paymentVal = (utrIdx >= 0 ? String(row[utrIdx] ?? '').trim() : '') || (paymentIdx >= 0 ? String(row[paymentIdx] ?? '').trim() : '');
+
+    let paymentProofUrl: string | undefined = undefined;
+    if (paymentScreenshotIdx >= 0) {
+      const rawProof = String(row[paymentScreenshotIdx] ?? '').trim();
+      const urls = rawProof.split(/[\s,;|\n]+/).filter(u => u.startsWith('http'));
+      if (urls.length > 0) paymentProofUrl = urls[0];
+      else if (rawProof) paymentProofUrl = rawProof;
+    }
+    if (!paymentProofUrl) {
+      row.forEach((cell, cIdx) => {
+        if (cIdx !== collegeIdIdx && cIdx !== leaderEmailIdx && cIdx !== teamIdIdx) {
+          const s = String(cell ?? '').trim();
+          if (s.startsWith('http') && (s.includes('drive.google.com') || s.includes('photos') || s.includes('uc?id='))) {
+            paymentProofUrl = s;
+          }
+        }
+      });
+    }
+
+    const paymentStatus = paymentVal
+      ? (paymentProofUrl ? 'Verified' : 'UTR Submitted')
+      : (paymentProofUrl ? 'Proof Uploaded' : 'Pending');
 
     const attendanceUpper = attendanceValue.toUpperCase();
     const isPresent = attendanceUpper === 'P' || attendanceUpper === 'PRESENT';
@@ -428,7 +469,8 @@ export async function syncTeamsFromSheet(
       members: members.length > 0 ? members : undefined,
       collegeIdUrls: collegeIdUrls.length > 0 ? collegeIdUrls : (rawCollegeId ? [rawCollegeId] : undefined),
       paymentRef: paymentVal || undefined,
-      paymentStatus: paymentVal ? 'Submitted' : 'Pending',
+      paymentProofUrl: paymentProofUrl || undefined,
+      paymentStatus,
       isPresent,
       attendanceValue,
       emailStatus: emailStatus || undefined,

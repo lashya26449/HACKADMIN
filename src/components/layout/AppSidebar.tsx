@@ -36,44 +36,38 @@ export function AppSidebar() {
     }
   };
 
-  const isCheckinOrganizer = role === 'checkin_organizer';
-
-  // Check-in organizers can ONLY see and access check-in
-  const navItems = isCheckinOrganizer
-    ? [
-        {
-          href: '/admin/check-in',
-          label: 'Attendance Check-in',
-          icon: Users,
-          description: 'Mark team attendance',
-        },
-      ]
-    : [
-        {
-          href: '/admin/check-in',
-          label: 'Attendance Check-in',
-          icon: Users,
-          description: 'Mark team attendance',
-        },
-        {
-          href: '/admin/directory',
-          label: 'Registration Directory',
-          icon: FileText,
-          description: 'Participant registry',
-        },
-        {
-          href: '/admin/id-cards',
-          label: 'College ID Cards',
-          icon: CreditCard,
-          description: 'Verify uploaded IDs',
-        },
-        {
-          href: '/admin/activity',
-          label: 'Governance & Audit',
-          icon: Activity,
-          description: 'Audit trail and verification',
-        },
-      ];
+  const navItems = [
+    {
+      href: '/admin/check-in',
+      label: 'Attendance Check-in',
+      icon: Users,
+      description: 'Mark team attendance',
+    },
+    {
+      href: '/admin/payments',
+      label: 'Payments & UTR',
+      icon: CreditCard,
+      description: 'UTR and payment proof',
+    },
+    {
+      href: '/admin/directory',
+      label: 'Registration Directory',
+      icon: FileText,
+      description: 'Participant registry',
+    },
+    {
+      href: '/admin/id-cards',
+      label: 'College ID Cards',
+      icon: Shield,
+      description: 'Verify uploaded IDs',
+    },
+    {
+      href: '/admin/activity',
+      label: 'Governance & Audit',
+      icon: Activity,
+      description: 'Audit trail and verification',
+    },
+  ];
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col bg-[#101010] text-[#F0F0F0] border-r border-white/10">
@@ -94,7 +88,7 @@ export function AppSidebar() {
       <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
         <div className="px-2 pb-1.5">
           <p className="text-[10px] font-semibold tracking-wider text-[#808080] uppercase">
-            {isCheckinOrganizer ? 'Check-in Desk' : 'Administration'}
+            Workspace
           </p>
         </div>
         {navItems.map(item => {
@@ -127,7 +121,7 @@ export function AppSidebar() {
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-[#F0F0F0] truncate">{user?.email || 'Administrator'}</p>
             <p className="text-[10px] text-[#808080] capitalize">
-              {isCheckinOrganizer ? 'Check-in Organizer' : 'Administrator'}
+              {role ? role.replace('_', ' ') : 'Administrator'}
             </p>
           </div>
         </div>

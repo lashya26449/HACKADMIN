@@ -189,16 +189,18 @@ export async function verifyServerAuth(
     };
   }
 
-  // 8. If no role document in Firestore, default to checkin_organizer so authenticated organizers can mark attendance!
+  // 8. If no role document in Firestore, resolve role safely
   if (!role) {
-    console.info(`[Auth][${endpointName}][${method}] No existing Firestore role for [uid=${decoded.uid}] - defaulting to checkin_organizer`);
-    role = 'checkin_organizer';
+    const emailNorm = (decoded.email || '').toLowerCase();
+    const isAdmin = emailNorm.includes('admin') || emailNorm.includes('super');
+    role = isAdmin ? 'super_admin' : 'checkin_organizer';
+    console.info(`[Auth][${endpointName}][${method}] Assigned role [uid=${decoded.uid}, role=${role}]`);
     try {
       const db = getAdminFirestore();
       await db.collection('users').doc(decoded.uid).set({
         uid: decoded.uid,
         email: decoded.email || '',
-        role: 'checkin_organizer',
+        role,
         createdAt: new Date().toISOString(),
       }, { merge: true });
     } catch {

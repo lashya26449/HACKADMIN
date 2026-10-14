@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/check-in': 'Attendance Management',
+  '/admin/payments': 'Payments & Verification',
   '/admin/directory': 'Registration Directory',
   '/admin/dashboard': 'Registration Directory',
   '/admin/id-cards': 'College ID Cards Verification',

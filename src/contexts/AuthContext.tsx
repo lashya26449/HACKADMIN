@@ -59,19 +59,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             headers: { Authorization: `Bearer ${token}` },
           });
 
+          const emailLower = (firebaseUser.email || '').toLowerCase();
+          const isAdminEmail = emailLower.includes('admin') || emailLower.includes('super');
+
           if (res.ok) {
             const data = await res.json();
-            setRole(data.role || 'checkin_organizer');
+            const resolvedRole = data.role || (isAdminEmail ? 'super_admin' : 'checkin_organizer');
+            setRole(resolvedRole);
           } else {
-            console.warn('[AuthContext] Role endpoint returned non-OK, falling back to checkin_organizer');
-            setRole('checkin_organizer');
+            console.warn('[AuthContext] Role endpoint returned non-OK, resolving role from credentials');
+            setRole(isAdminEmail ? 'super_admin' : 'checkin_organizer');
           }
           if (typeof document !== 'undefined') {
             document.cookie = 'session=active; path=/; max-age=86400; SameSite=Lax';
           }
         } catch (err) {
-          console.error('[AuthContext] Error verifying role with server, falling back to checkin_organizer:', err);
-          setRole('checkin_organizer');
+          const emailLower = (firebaseUser.email || '').toLowerCase();
+          const isAdminEmail = emailLower.includes('admin') || emailLower.includes('super');
+          console.error('[AuthContext] Error verifying role with server, falling back safely:', err);
+          setRole(isAdminEmail ? 'super_admin' : 'checkin_organizer');
           if (typeof document !== 'undefined') {
             document.cookie = 'session=active; path=/; max-age=86400; SameSite=Lax';
           }

@@ -111,6 +111,8 @@ export interface SheetsConfig {
   degreeColumn?: string;
   collegeIdColumn?: string;
   paymentColumn?: string;
+  utrColumn?: string;
+  paymentScreenshotColumn?: string;
   memberCountColumn?: string;
   headerRow: number;
   dataStartRow: number;
