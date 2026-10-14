@@ -174,7 +174,7 @@ export default function IdCardsPage() {
                         </Button>
 
                         <a
-                          href={fileId ? `/api/drive/file?id=${fileId}` : primaryUrl!}
+                          href={fileId ? `https://drive.google.com/file/d/${fileId}/view` : primaryUrl!}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-white/10 bg-white/[0.04] text-[#B5B5B5] hover:text-[#F0F0F0] hover:bg-white/[0.08] transition-colors"
@@ -215,9 +215,10 @@ export default function IdCardsPage() {
           <div className="rounded-lg border border-white/10 bg-[#080808] overflow-hidden flex items-center justify-center min-h-[300px] p-2">
             {selectedDoc?.fileId ? (
               <iframe
-                src={`/api/drive/file?id=${selectedDoc.fileId}`}
+                src={`https://drive.google.com/file/d/${selectedDoc.fileId}/preview`}
                 title={`ID Card for ${selectedDoc.teamId}`}
                 className="w-full h-[400px] rounded border-0 bg-[#080808]"
+                allow="autoplay"
               />
             ) : (
               <div className="p-8 text-center text-[#808080]">
@@ -240,17 +241,15 @@ export default function IdCardsPage() {
               Ref: {selectedDoc?.fileId || selectedDoc?.url}
             </span>
             <div className="flex gap-2">
-              {selectedDoc?.fileId && (
-                <a
-                  href={`/api/drive/file?id=${selectedDoc.fileId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#F0F0F0] text-[#080808] hover:bg-white text-xs font-semibold"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Open Full
-                </a>
-              )}
+              <a
+                href={selectedDoc?.fileId ? `https://drive.google.com/file/d/${selectedDoc.fileId}/view` : selectedDoc?.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#F0F0F0] text-[#080808] hover:bg-white text-xs font-semibold"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Open in Google Drive
+              </a>
             </div>
           </div>
         </DialogContent>

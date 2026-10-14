@@ -15,11 +15,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid Google Drive file reference' }, { status: 400 });
   }
 
+  const directViewUrl = `https://drive.google.com/file/d/${fileId}/view`;
+
   if (!hasGoogleSheetsCredentials()) {
-    return NextResponse.json(
-      { error: 'Google Service Account credentials required to access Drive uploads.' },
-      { status: 503 }
-    );
+    return NextResponse.redirect(directViewUrl);
   }
 
   try {
@@ -48,10 +47,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Drive file retrieval failed';
-    return NextResponse.json({
-      error: `Could not retrieve file from Google Drive: ${message}. Ensure the Google Forms upload file is shared with the service account.`,
-      fileId,
-    }, { status: 500 });
+    console.warn(`[DriveProxy] Direct stream failed for ${fileId}, redirecting to Google Drive web view:`, error);
+    // If service account cannot access the file directly (e.g. Google Forms folder not shared with service account),
+    // redirect directly to Google Drive so the organizer's browser accesses it with their active Google account.
+    return NextResponse.redirect(directViewUrl);
   }
 }
