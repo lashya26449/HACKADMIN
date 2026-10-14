@@ -185,6 +185,7 @@ export async function inspectAndMapHeaders(
   let paymentCol = '';
   let utrCol = '';
   let paymentScreenshotCol = '';
+  let whatsappCol = '';
   let memberCountCol = '';
 
   rawHeaders.forEach((header, idx) => {
@@ -234,8 +235,13 @@ export async function inspectAndMapHeaders(
       leaderEmailCol = letter;
       purpose = 'Leader Email';
     }
-    // 9. Leader Phone
-    else if (/phone|mobile|contact|whatsapp/.test(norm) && !leaderPhoneCol) {
+    // 9a. WhatsApp Confirmation (Column R)
+    else if (/whatsapp\s*confirmation|whatsapp\s*link|whatsapp\s*msg/.test(norm)) {
+      whatsappCol = letter;
+      purpose = 'WhatsApp Confirmation';
+    }
+    // 9b. Leader Phone (Column H)
+    else if ((/phone|mobile|contact/.test(norm) || (norm.includes('whatsapp') && !norm.includes('confirmation') && !norm.includes('link') && !norm.includes('status'))) && !leaderPhoneCol) {
       leaderPhoneCol = letter;
       purpose = 'Leader Phone';
     }
@@ -295,6 +301,7 @@ export async function inspectAndMapHeaders(
       paymentColumn: paymentCol,
       utrColumn: utrCol || paymentCol,
       paymentScreenshotColumn: paymentScreenshotCol,
+      whatsappColumn: whatsappCol,
       memberCountColumn: memberCountCol,
       headerRow,
       dataStartRow: headerRow + 1,
@@ -348,6 +355,8 @@ export async function syncTeamsFromSheet(
     config.emailStatusColumn,
     config.collegeIdColumn,
     config.paymentColumn,
+    config.paymentScreenshotColumn,
+    config.whatsappColumn,
     config.memberCountColumn,
   ].filter((col): col is string => Boolean(col));
 
@@ -386,6 +395,8 @@ export async function syncTeamsFromSheet(
   const utrIdx = utrColLetter ? columnLetterToIndex(utrColLetter) : -1;
   const paymentScreenshotColLetter = config.paymentScreenshotColumn;
   const paymentScreenshotIdx = paymentScreenshotColLetter ? columnLetterToIndex(paymentScreenshotColLetter) : -1;
+  const whatsappColLetter = config.whatsappColumn;
+  const whatsappIdx = whatsappColLetter ? columnLetterToIndex(whatsappColLetter) : -1;
   const memberCountIdx = config.memberCountColumn ? columnLetterToIndex(config.memberCountColumn) : -1;
 
   const seenIds = new Map<string, number[]>();
@@ -474,6 +485,7 @@ export async function syncTeamsFromSheet(
       isPresent,
       attendanceValue,
       emailStatus: emailStatus || undefined,
+      whatsappUrl: whatsappIdx >= 0 ? String(row[whatsappIdx] ?? '').trim() || undefined : undefined,
       rowIndex: rowNumber,
       syncedAt: new Date().toISOString(),
     });

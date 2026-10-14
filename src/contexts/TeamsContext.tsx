@@ -12,7 +12,7 @@ interface TeamsContextValue {
   error: string | null;
   sheetsConnected: boolean;
   liveSheetTitle: string | null;
-  refreshTeams: (silent?: boolean) => Promise<boolean>;
+  refreshTeams: (silent?: boolean, force?: boolean) => Promise<boolean>;
   syncNow: () => Promise<void>;
   updateTeamLocally: (teamId: string, updates: Partial<Team>) => void;
   isOnline: boolean;

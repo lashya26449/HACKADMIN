@@ -2,12 +2,17 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Wifi, WifiOff, RefreshCw, Clock, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, Clock, CheckCircle2, AlertCircle, LogOut, Keyboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeams } from '@/contexts/TeamsContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { KeyboardShortcutsHelpDialog } from '@/components/shortcuts/KeyboardShortcutsHelpDialog';
+import { QuickSearchDialog } from '@/components/shortcuts/QuickSearchDialog';
+import { ExportOptionsDialog } from '@/components/export/ExportOptionsDialog';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useRouter } from 'next/navigation';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/check-in': 'Attendance Management',
@@ -56,8 +61,52 @@ export function AppHeader() {
     }
   };
 
+  const [headerHelpOpen, setHeaderHelpOpen] = useState(false);
+  const [headerQuickSearchOpen, setHeaderQuickSearchOpen] = useState(false);
+  const [headerExportOpen, setHeaderExportOpen] = useState(false);
+  const router = useRouter();
+
   const title = Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? 'HackAdmin';
   const isCheckInPage = pathname === '/admin/check-in';
+
+  // Global shortcuts for pages other than /admin/check-in
+  useKeyboardShortcuts([
+    {
+      id: 'header-quick-search',
+      key: 'k',
+      ctrlOrCmd: true,
+      description: 'Quick Search Modal',
+      category: 'navigation',
+      allowInInput: true,
+      handler: () => setHeaderQuickSearchOpen(true),
+    },
+    {
+      id: 'header-help',
+      key: '?',
+      description: 'Keyboard Shortcuts Reference',
+      category: 'help',
+      allowInInput: false,
+      handler: () => setHeaderHelpOpen(true),
+    },
+    {
+      id: 'header-refresh',
+      key: 'r',
+      alt: true,
+      description: 'Refresh Team Data',
+      category: 'attendance',
+      allowInInput: true,
+      handler: () => syncNow(),
+    },
+    {
+      id: 'header-export',
+      key: 'e',
+      alt: true,
+      description: 'Export Options',
+      category: 'attendance',
+      allowInInput: true,
+      handler: () => setHeaderExportOpen(true),
+    },
+  ], !isCheckInPage);
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#080808]/90 px-4 md:px-6 backdrop-blur-xl z-20">
@@ -182,10 +231,22 @@ export function AppHeader() {
           onClick={() => syncNow()}
           disabled={syncInProgress || !isOnline}
           className="h-7 px-2.5 text-xs border-white/10 bg-white/[0.045] hover:bg-white/[0.08]"
-          title="Refresh registration and attendance data from Google Sheets"
+          title="Refresh registration and attendance data from Google Sheets (Alt + R)"
         >
           <RefreshCw className={cn('h-3 w-3 mr-1.5', syncInProgress && 'animate-spin')} />
           <span className="hidden sm:inline">{syncInProgress ? 'Syncing...' : 'Sync'}</span>
+        </Button>
+
+        {/* Keyboard Shortcuts Reference Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setHeaderHelpOpen(true)}
+          className="h-7 px-2 text-xs border-white/10 bg-white/[0.045] hover:bg-white/[0.08] text-[#808080] hover:text-[#F0F0F0]"
+          title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts reference"
+        >
+          <Keyboard className="h-3.5 w-3.5" />
         </Button>
 
         {/* Real Signed-in User Info & Sign Out */}
@@ -216,6 +277,20 @@ export function AppHeader() {
           </Button>
         </div>
       </div>
+
+      {!isCheckInPage && (
+        <>
+          <KeyboardShortcutsHelpDialog open={headerHelpOpen} onOpenChange={setHeaderHelpOpen} />
+          <QuickSearchDialog
+            open={headerQuickSearchOpen}
+            onOpenChange={setHeaderQuickSearchOpen}
+            onSelectTeam={() => {
+              router.push('/admin/check-in');
+            }}
+          />
+          <ExportOptionsDialog open={headerExportOpen} onOpenChange={setHeaderExportOpen} />
+        </>
+      )}
     </header>
   );
 }

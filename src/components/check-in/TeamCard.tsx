@@ -17,6 +17,9 @@ interface TeamCardProps {
   canCheckIn: boolean;
   processingTeamId?: string;
   isDuplicate?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  onRequestCheckIn?: () => void;
 }
 
 export function TeamCard({
@@ -25,6 +28,9 @@ export function TeamCard({
   canCheckIn,
   processingTeamId,
   isDuplicate,
+  isSelected,
+  onSelect,
+  onRequestCheckIn,
 }: TeamCardProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -49,10 +55,14 @@ export function TeamCard({
   return (
     <>
       <div
+        id={`team-card-${team.teamId}`}
+        onClick={onSelect}
         className={cn(
-          'w-full rounded-xl border border-white/10 bg-white/[0.045] backdrop-blur-xl text-[#F0F0F0] shadow-md transition-all duration-200',
+          'w-full rounded-xl border border-white/10 bg-white/[0.045] backdrop-blur-xl text-[#F0F0F0] shadow-md transition-all duration-200 cursor-pointer',
           'p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4',
-          isPresent && 'border-emerald-800/40 bg-emerald-950/20',
+          isSelected && 'ring-2 ring-emerald-500/70 border-emerald-500/60 bg-white/[0.08] shadow-emerald-950/40 shadow-lg',
+          isPresent && !isSelected && 'border-emerald-800/40 bg-emerald-950/20',
+          isPresent && isSelected && 'border-emerald-500/80 bg-emerald-950/30',
           isProcessing && 'border-white/30 ring-1 ring-white/20',
           localError && 'border-red-800/50 bg-red-950/20',
           isDuplicate && 'border-amber-800/50 bg-amber-950/20'
@@ -65,6 +75,12 @@ export function TeamCard({
             <span className="font-mono text-xs font-bold text-[#F0F0F0] bg-white/[0.08] border border-white/12 px-2.5 py-1 rounded-md shrink-0 tracking-wide">
               {team.teamId}
             </span>
+
+            {isSelected && (
+              <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40 animate-in fade-in-0">
+                Selected &middot; Enter / Alt+P
+              </span>
+            )}
 
             <span className="text-white/20 hidden sm:inline select-none">|</span>
 
@@ -138,7 +154,7 @@ export function TeamCard({
             ) : (
               <Button
                 size="sm"
-                onClick={() => setDialogOpen(true)}
+                onClick={() => onRequestCheckIn ? onRequestCheckIn() : setDialogOpen(true)}
                 disabled={isProcessing || !canCheckIn || isDuplicate}
                 className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95 transition-all"
               >

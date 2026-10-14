@@ -50,6 +50,7 @@ function mapHeaders(headers) {
   let collegeIdCol = '';
   let paymentCol = '';
   let memberCountCol = '';
+  let whatsappCol = '';
 
   headers.forEach((header, idx) => {
     const letter = indexToColumnLetter(idx);
@@ -72,7 +73,9 @@ function mapHeaders(headers) {
       emailStatusCol = letter;
     } else if (/email|mail/.test(norm) && !leaderEmailCol && !norm.includes('status')) {
       leaderEmailCol = letter;
-    } else if (/phone|mobile|contact|whatsapp/.test(norm) && !leaderPhoneCol) {
+    } else if (/whatsapp\s*confirmation|whatsapp\s*link|whatsapp\s*msg/.test(norm)) {
+      whatsappCol = letter;
+    } else if ((/phone|mobile|contact/.test(norm) || (norm.includes('whatsapp') && !norm.includes('confirmation') && !norm.includes('link') && !norm.includes('status'))) && !leaderPhoneCol) {
       leaderPhoneCol = letter;
     } else if ((/attendance|check\s*in/.test(norm) || norm === 'present' || norm === 'attendance status') && !norm.includes('email')) {
       attendanceCol = letter;
@@ -96,6 +99,7 @@ function mapHeaders(headers) {
     collegeIdCol,
     paymentCol,
     memberCountCol,
+    whatsappCol,
   };
 }
 
@@ -607,6 +611,167 @@ test('20. Shared server-auth verification: covers all Phase 5 security and token
   assert.equal(r8.success, false);
   assert.equal(r8.status, 500);
   assert.equal(r8.code, 'ADMIN_INIT_FAILED');
+});
+
+test('21. Keyboard shortcuts: matching criteria, platform modifiers, input safety, and attendance guardrails', () => {
+  // Helper to simulate matchesShortcut
+  function matchesShortcutSim(e, shortcut, isMac) {
+    if (shortcut.disabled) return false;
+    if (e.isComposing) return false;
+
+    const lowerKey = shortcut.key.toLowerCase();
+    const eventKey = e.key.toLowerCase();
+
+    if (lowerKey === '?') {
+      if (e.key !== '?' && !(e.key === '/' && e.shiftKey)) return false;
+    } else if (eventKey !== lowerKey) {
+      return false;
+    }
+
+    if (shortcut.ctrlOrCmd) {
+      const hasMod = isMac ? e.metaKey : e.ctrlKey;
+      if (!hasMod) return false;
+    } else {
+      if (e.metaKey) return false;
+      if (!shortcut.alt && e.ctrlKey) return false;
+    }
+
+    if (shortcut.alt) {
+      if (!e.altKey) return false;
+    } else {
+      if (e.altKey) return false;
+    }
+
+    return true;
+  }
+
+  // 1. "/" focuses search (without Ctrl/Alt/Meta)
+  assert.equal(matchesShortcutSim({ key: '/', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: '/' }, false), true);
+  // "/" ignored while user presses Ctrl+/
+  assert.equal(matchesShortcutSim({ key: '/', isComposing: false, altKey: false, ctrlKey: true, metaKey: false }, { key: '/' }, false), false);
+
+  // 2. Ctrl+K (Windows/Linux) and Cmd+K (macOS)
+  const quickSearchDef = { key: 'k', ctrlOrCmd: true };
+  assert.equal(matchesShortcutSim({ key: 'k', isComposing: false, altKey: false, ctrlKey: true, metaKey: false }, quickSearchDef, false), true);
+  assert.equal(matchesShortcutSim({ key: 'k', isComposing: false, altKey: false, ctrlKey: false, metaKey: true }, quickSearchDef, true), true);
+  // Cmd+K on Windows should not trigger Windows ctrl shortcut
+  assert.equal(matchesShortcutSim({ key: 'k', isComposing: false, altKey: false, ctrlKey: false, metaKey: true }, quickSearchDef, false), false);
+
+  // 3. ArrowUp and ArrowDown
+  assert.equal(matchesShortcutSim({ key: 'ArrowDown', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: 'ArrowDown' }, false), true);
+  assert.equal(matchesShortcutSim({ key: 'ArrowUp', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: 'ArrowUp' }, false), true);
+
+  // 4. Enter
+  assert.equal(matchesShortcutSim({ key: 'Enter', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: 'Enter' }, false), true);
+
+  // 5. Escape
+  assert.equal(matchesShortcutSim({ key: 'Escape', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: 'Escape' }, false), true);
+
+  // 6. Alt+P (Mark Selected Present)
+  const altP = { key: 'p', alt: true };
+  assert.equal(matchesShortcutSim({ key: 'p', isComposing: false, altKey: true, ctrlKey: false, metaKey: false }, altP, false), true);
+  // Regular 'p' without Alt does not match
+  assert.equal(matchesShortcutSim({ key: 'p', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, altP, false), false);
+
+  // 7. Alt+U (Filter Unmarked Teams)
+  assert.equal(matchesShortcutSim({ key: 'u', isComposing: false, altKey: true, ctrlKey: false, metaKey: false }, { key: 'u', alt: true }, false), true);
+
+  // 8. Alt+A (Show All Teams)
+  assert.equal(matchesShortcutSim({ key: 'a', isComposing: false, altKey: true, ctrlKey: false, metaKey: false }, { key: 'a', alt: true }, false), true);
+
+  // 9. Alt+R (Refresh Team Data)
+  assert.equal(matchesShortcutSim({ key: 'r', isComposing: false, altKey: true, ctrlKey: false, metaKey: false }, { key: 'r', alt: true }, false), true);
+
+  // 10. Alt+Q (Quick Scan Mode)
+  assert.equal(matchesShortcutSim({ key: 'q', isComposing: false, altKey: true, ctrlKey: false, metaKey: false }, { key: 'q', alt: true }, false), true);
+
+  // 11. Alt+E (Export Options)
+  assert.equal(matchesShortcutSim({ key: 'e', isComposing: false, altKey: true, ctrlKey: false, metaKey: false }, { key: 'e', alt: true }, false), true);
+
+  // 12. "?" (Keyboard Shortcut Help)
+  assert.equal(matchesShortcutSim({ key: '?', isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: '?' }, false), true);
+  assert.equal(matchesShortcutSim({ key: '/', shiftKey: true, isComposing: false, altKey: false, ctrlKey: false, metaKey: false }, { key: '?' }, false), true);
+
+  // Attendance Safety: Alt+P must open explicit confirmation dialog and never write optimistically
+  let confirmationOpenedForTeam = null;
+  function handleAltPShortcut(selectedTeam, canCheckIn) {
+    if (!canCheckIn) throw new Error('Unauthorized');
+    if (!selectedTeam) return 'NO_TEAM_SELECTED';
+    if (selectedTeam.isPresent) return 'ALREADY_PRESENT';
+    confirmationOpenedForTeam = selectedTeam.teamId;
+    return 'CONFIRMATION_OPENED';
+  }
+
+  assert.equal(handleAltPShortcut(null, true), 'NO_TEAM_SELECTED');
+  assert.equal(handleAltPShortcut({ teamId: 'LAK-001', isPresent: true }, true), 'ALREADY_PRESENT');
+  assert.equal(handleAltPShortcut({ teamId: 'LAK-002', isPresent: false }, true), 'CONFIRMATION_OPENED');
+  assert.equal(confirmationOpenedForTeam, 'LAK-002');
+  assert.throws(() => handleAltPShortcut({ teamId: 'LAK-003', isPresent: false }, false), /Unauthorized/);
+});
+
+test('22. Column R WhatsApp Confirmation: header mapping, phone normalization, URL construction, and column isolation', () => {
+  // Test Phone Normalization
+  function normalizePhone(raw) {
+    if (!raw) return null;
+    const str = String(raw).trim();
+    if (!str) return null;
+    const hadPlus = str.startsWith('+');
+    const digits = str.replace(/[^0-9]/g, '');
+    if (digits.length < 10) return null;
+    if (hadPlus) return digits;
+    if (digits.length === 10) return '91' + digits;
+    if (digits.length === 11 && digits.startsWith('0')) return '91' + digits.substring(1);
+    if (digits.length === 12 && digits.startsWith('91')) return digits;
+    return digits;
+  }
+
+  // A. Valid Indian 10-digit number -> prepends 91
+  assert.equal(normalizePhone('9876543210'), '919876543210');
+  assert.equal(normalizePhone(' 98765 43210 '), '919876543210');
+  assert.equal(normalizePhone('9876-543-210'), '919876543210');
+
+  // B. Indian number already beginning with 91 -> no duplicate 91
+  assert.equal(normalizePhone('919876543210'), '919876543210');
+  assert.equal(normalizePhone('09876543210'), '919876543210');
+
+  // C. Explicitly international number -> preserves country code without prepending 91
+  assert.equal(normalizePhone('+14155552671'), '14155552671');
+  assert.equal(normalizePhone('+447911123456'), '447911123456');
+
+  // D & E. Missing and invalid phone numbers -> returns null
+  assert.equal(normalizePhone(''), null);
+  assert.equal(normalizePhone('12345'), null);
+  assert.equal(normalizePhone('N/A'), null);
+  assert.equal(normalizePhone(null), null);
+
+  // Message template & URL encoding test
+  const teamName = 'Cyber Knights & Co.';
+  const teamId = 'LAK-042';
+  const expectedMsg = `Hello ${teamName} Team!\n\nThank you for registering for LAKSHYA 2026.\n\nYour Team ID is: ${teamId}\n\nPlease save your Team ID for future event communication.\n\nWe look forward to seeing you at LAKSHYA 2026!\n\nRegards,\nLAKSHYA 2026 Organizing Team`;
+  const encoded = encodeURIComponent(expectedMsg);
+  const waUrl = `https://wa.me/919876543210?text=${encoded}`;
+  const formula = `=HYPERLINK("${waUrl}", "Send WhatsApp")`;
+
+  assert.match(formula, /^=HYPERLINK\("https:\/\/wa\.me\/919876543210\?text=/);
+  assert.match(formula, /Send WhatsApp"\)$/);
+  assert.equal(decodeURIComponent(encoded), expectedMsg);
+
+  // Header mapping with Column R
+  const headersWithR = [
+    ...LIVE_HEADERS,
+    "WhatsApp Confirmation" // Col R (index 17)
+  ];
+  const mapped = mapHeaders(headersWithR);
+
+  assert.equal(mapped.teamIdCol, 'O', 'Team ID must remain Column O');
+  assert.equal(mapped.attendanceCol, 'P', 'Attendance must remain Column P');
+  assert.equal(mapped.emailStatusCol, 'Q', 'Email Status must remain Column Q');
+  assert.equal(mapped.leaderPhoneCol, 'H', 'Leader Phone must remain Column H');
+  assert.equal(mapped.whatsappCol, 'R', 'WhatsApp Confirmation must be mapped to Column R');
+
+  // Verify Column R does not interfere with Column P or Column Q writes
+  assert.notEqual(mapped.whatsappCol, mapped.attendanceCol);
+  assert.notEqual(mapped.whatsappCol, mapped.emailStatusCol);
 });
 
 

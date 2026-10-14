@@ -28,6 +28,7 @@ export interface Team {
   isPresent: boolean;
   attendanceValue?: string;
   emailStatus?: string;
+  whatsappUrl?: string;
   rowIndex?: number;
   registeredAt?: string;
   updatedAt?: string;
@@ -113,6 +114,7 @@ export interface SheetsConfig {
   paymentColumn?: string;
   utrColumn?: string;
   paymentScreenshotColumn?: string;
+  whatsappColumn?: string;
   memberCountColumn?: string;
   headerRow: number;
   dataStartRow: number;
