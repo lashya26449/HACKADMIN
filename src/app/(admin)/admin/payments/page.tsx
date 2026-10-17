@@ -12,8 +12,6 @@ import { Input } from '@/components/ui/input';
 import { useTeams } from '@/contexts/TeamsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { sound } from '@/lib/audio';
-import { cn } from '@/lib/utils';
 
 type PaymentFilter = 'all' | 'utr_submitted' | 'utr_missing' | 'has_proof' | 'present';
 
@@ -93,31 +91,9 @@ export default function PaymentsPage() {
   const [exporting, setExporting] = useState(false);
   const [printDate, setPrintDate] = useState('');
 
-  const [verifiedUtrTeams, setVerifiedUtrTeams] = useState<Record<string, boolean>>({});
-
   useEffect(() => {
     setPrintDate(formatPaymentTimestamp(new Date().toISOString()));
-    try {
-      const stored = localStorage.getItem('lakshya_verified_utr_teams');
-      if (stored) {
-        setVerifiedUtrTeams(JSON.parse(stored));
-      }
-    } catch {}
   }, []);
-
-  const toggleUtrVerified = (teamId: string) => {
-    setVerifiedUtrTeams(prev => {
-      const updated = { ...prev, [teamId]: !prev[teamId] };
-      try {
-        localStorage.setItem('lakshya_verified_utr_teams', JSON.stringify(updated));
-      } catch {}
-      if (updated[teamId]) {
-        sound.playSuccessChime();
-        toast.success(`Team ${teamId} UTR Verified ✓`);
-      }
-      return updated;
-    });
-  };
 
   // Statistics
   const stats = useMemo(() => {
@@ -435,7 +411,6 @@ export default function PaymentsPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] text-[#909090] text-[11px] font-semibold uppercase tracking-wider">
-                    <th className="py-3 px-3 w-16 text-center">Verify</th>
                     <th className="py-3 px-3.5 w-12 text-center">#</th>
                     <th className="py-3 px-3.5 w-28">Team ID</th>
                     <th className="py-3 px-4 min-w-[170px]">Team & College</th>
@@ -451,28 +426,9 @@ export default function PaymentsPage() {
                     const hasUtr = Boolean(team.paymentRef && team.paymentRef.trim().length > 0);
                     const hasProof = Boolean(team.paymentProofUrl && team.paymentProofUrl.trim().length > 0);
                     const timing = formatTiming(team.registeredAt);
-                    const isVerified = Boolean(verifiedUtrTeams[team.teamId]);
 
                     return (
                       <tr key={team.teamId} className="hover:bg-white/[0.04] transition-colors group">
-                        {/* 2by2 Independent UTR Verification Checkbox */}
-                        <td className="py-3.5 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => toggleUtrVerified(team.teamId)}
-                            className={cn(
-                              "w-6 h-6 rounded-md border transition-all duration-200 flex items-center justify-center mx-auto cursor-pointer",
-                              isVerified
-                                ? "border-emerald-400 bg-emerald-500/25 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
-                                : "border-white/20 bg-white/[0.04] hover:border-emerald-400/60 hover:bg-white/[0.08] text-transparent"
-                            )}
-                            title={isVerified ? "UTR Verified (click to untick)" : "Click to tick UTR as verified"}
-                            aria-label={`Verify UTR for team ${team.teamId}`}
-                          >
-                            <Check className={cn("h-3.5 w-3.5 stroke-[3]", isVerified ? "opacity-100" : "opacity-0")} />
-                          </button>
-                        </td>
-
                         {/* Sl No */}
                         <td className="py-3.5 px-3.5 text-center text-[#606060] font-mono">
                           {idx + 1}
@@ -623,11 +579,9 @@ export default function PaymentsPage() {
           <tbody>
             {filteredTeams.map((team, idx) => (
               <tr key={team.teamId} className="border-b border-gray-300 page-break-inside-avoid text-[12px]">
-                {/* 2x2 independent check cube */}
+                {/* 2x2 independent check cube for pen tick off */}
                 <td className="py-2 px-2 border border-gray-300 text-center align-middle">
-                  <div className="w-5 h-5 border-2 border-black rounded-sm mx-auto flex items-center justify-center">
-                    {verifiedUtrTeams[team.teamId] && <span className="text-black font-bold text-xs leading-none">✓</span>}
-                  </div>
+                  <div className="w-5 h-5 border-2 border-black rounded-sm mx-auto" />
                 </td>
                 <td className="py-2 px-2 border border-gray-300 text-center font-mono align-top">{idx + 1}</td>
                 <td className="py-2 px-2 border border-gray-300 font-mono font-bold align-top break-words">{team.teamId}</td>
