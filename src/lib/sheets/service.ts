@@ -558,21 +558,22 @@ export async function provisionTeamIds(
   const teamIdColIdx = columnLetterToIndex(teamIdColumnLetter);
   const dataRows = rows.slice(dataStartRow - 1);
 
-  // Scan existing IDs to find maximum sequence number
-  let maxSeq = 0;
+  // Scan existing IDs to find all currently allocated numbers
+  const allocated = new Set<number>();
   dataRows.forEach(row => {
     const existingId = String(row[teamIdColIdx] ?? '').trim();
     if (existingId.startsWith(prefix)) {
       const numPart = parseInt(existingId.replace(prefix, ''), 10);
-      if (!isNaN(numPart) && numPart > maxSeq) {
-        maxSeq = numPart;
+      if (!isNaN(numPart)) {
+        allocated.add(numPart);
       }
     }
   });
 
-  // Provision IDs for rows that are missing one
+  // Provision IDs for rows that are missing one (starting from 2, skipping LAK-001)
   const assignedMap: { rowIndex: number; teamId: string }[] = [];
   const updates: { range: string; values: string[][] }[] = [];
+  let candidate = 2;
 
   dataRows.forEach((row, idx) => {
     const rowNum = idx + dataStartRow;
@@ -583,8 +584,11 @@ export async function provisionTeamIds(
     if (!hasData) return;
 
     if (!existingId) {
-      maxSeq++;
-      const paddedNum = String(maxSeq).padStart(3, '0');
+      while (allocated.has(candidate)) {
+        candidate++;
+      }
+      allocated.add(candidate);
+      const paddedNum = String(candidate).padStart(3, '0');
       const newId = `${prefix}${paddedNum}`;
 
       assignedMap.push({ rowIndex: rowNum, teamId: newId });

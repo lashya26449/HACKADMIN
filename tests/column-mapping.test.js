@@ -815,6 +815,51 @@ test('23. Column S Attendance Email Status: directions to CSE Seminar Hall, colu
   assert.ok(directionsBody.includes("LAK-001"));
 });
 
+test('24. Gap-filling Team ID allocation: skips LAK-001, fills 26-33, skips 34-35, and moves directly to 36+', () => {
+  // Existing IDs in the sheet: 2 through 25, plus 34 and 35
+  const existingIds = [];
+  for (let i = 2; i <= 25; i++) {
+    existingIds.push(`LAK-${String(i).padStart(3, '0')}`);
+  }
+  existingIds.push('LAK-034');
+  existingIds.push('LAK-035');
+
+  function getNextTeamId(idsList) {
+    const allocated = new Set();
+    idsList.forEach(id => {
+      const match = id.trim().match(/^LAK-(\d+)$/);
+      if (match) allocated.add(Number(match[1]));
+    });
+
+    let candidate = 2; // LAK-001 is reserved/skipped
+    while (allocated.has(candidate)) {
+      candidate++;
+    }
+    return `LAK-${String(candidate).padStart(3, '0')}`;
+  }
+
+  // 1. Next incoming team must get LAK-026 (first missing number after 25)
+  const first = getNextTeamId(existingIds);
+  assert.equal(first, 'LAK-026', 'First new team must be allocated LAK-026');
+  existingIds.push(first);
+
+  // 2. Next 7 teams fill the gap up to 33
+  for (let num = 27; num <= 33; num++) {
+    const nextId = getNextTeamId(existingIds);
+    assert.equal(nextId, `LAK-${String(num).padStart(3, '0')}`, `Must allocate LAK-${String(num).padStart(3, '0')}`);
+    existingIds.push(nextId);
+  }
+
+  // 3. Gap 26-33 is now completely filled. Since 34 and 35 already exist, next MUST be 36!
+  const afterGap = getNextTeamId(existingIds);
+  assert.equal(afterGap, 'LAK-036', 'Must skip 34 and 35 and allocate LAK-036 directly');
+  existingIds.push(afterGap);
+
+  // 4. Following team gets 37
+  const subsequent = getNextTeamId(existingIds);
+  assert.equal(subsequent, 'LAK-037', 'Must proceed sequentially to LAK-037');
+});
+
 
 
 

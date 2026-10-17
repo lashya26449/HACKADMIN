@@ -305,11 +305,15 @@ function initializeExistingRow_(sheet, row) {
 }
 
 /**
- * Finds the next unused sequential Team ID.
+ * Finds the next unused sequential Team ID by scanning the entire column:
+ * - Starts scanning from 2 (LAK-001 is skipped/reserved).
+ * - Fills any missing gaps (allocates LAK-026 through LAK-033).
+ * - Never duplicates existing numbers (automatically skips LAK-034 and LAK-035).
+ * - Moves directly to LAK-036, LAK-037, etc. once the gap is filled.
  */
 function getNextTeamId_(sheet, teamIdColumn) {
   const lastRow = sheet.getLastRow();
-  let maxId = 0;
+  const existingNumbers = {};
 
   if (lastRow >= 2) {
     const ids = sheet
@@ -320,12 +324,18 @@ function getNextTeamId_(sheet, teamIdColumn) {
       const match = id.trim().match(/^LAK-(\d+)$/);
 
       if (match) {
-        maxId = Math.max(maxId, Number(match[1]));
+        existingNumbers[Number(match[1])] = true;
       }
     });
   }
 
-  return CONFIG.prefix + String(maxId + 1).padStart(3, "0");
+  // Start from 2 (LAK-001 is skipped/reserved)
+  let candidate = 2;
+  while (existingNumbers[candidate]) {
+    candidate++;
+  }
+
+  return CONFIG.prefix + String(candidate).padStart(3, "0");
 }
 
 /**
