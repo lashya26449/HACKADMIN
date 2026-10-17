@@ -109,25 +109,22 @@ export function AppHeader() {
   ], !isCheckInPage);
 
   return (
-    <header className="print:hidden flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#080808]/90 px-4 md:px-6 backdrop-blur-xl z-20">
-      {/* Mobile spacer for menu hamburger when sidebar is active */}
-      {!isCheckInPage && <div className="w-8 md:hidden" />}
-
+    <header className="print:hidden flex h-14 shrink-0 items-center gap-2 md:gap-3 border-b border-white/10 bg-[#080808]/95 px-3 md:px-6 backdrop-blur-xl z-20 w-full">
       {/* Page Title & Brand */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2 shrink-0">
         <Link href="/admin/check-in" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
           <span className="font-bold text-sm tracking-tight text-[#F0F0F0]">HackAdmin</span>
         </Link>
-        <span className="text-white/20 text-xs">/</span>
-        <h1 className="text-xs font-medium text-[#B5B5B5] tracking-tight">{title}</h1>
+        <span className="text-white/20 text-xs hidden xl:inline">/</span>
+        <h1 className="text-xs font-medium text-[#B5B5B5] tracking-tight hidden xl:inline">{title}</h1>
       </div>
 
-      {/* Universal Navigation Shortcuts */}
-      <div className="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-white/10 text-xs">
+      {/* Universal Full-Width Navigation Bar */}
+      <div className="flex items-center gap-1 ml-1 sm:ml-2 pl-2 border-l border-white/10 text-xs overflow-x-auto py-1 shrink min-w-0">
         <Link
           href="/admin/check-in"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors",
+            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
             pathname === '/admin/check-in'
               ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
               : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
@@ -138,7 +135,7 @@ export function AppHeader() {
         <Link
           href="/admin/payments"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors",
+            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
             pathname.startsWith('/admin/payments')
               ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
               : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
@@ -149,7 +146,7 @@ export function AppHeader() {
         <Link
           href="/admin/directory"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors",
+            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
             pathname.startsWith('/admin/directory')
               ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
               : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
@@ -160,7 +157,7 @@ export function AppHeader() {
         <Link
           href="/admin/id-cards"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors",
+            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
             pathname.startsWith('/admin/id-cards')
               ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
               : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
@@ -171,7 +168,7 @@ export function AppHeader() {
         <Link
           href="/admin/activity"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors",
+            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
             pathname.startsWith('/admin/activity')
               ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
               : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
