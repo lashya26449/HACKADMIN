@@ -124,10 +124,10 @@ export function AppHeader() {
         <Link
           href="/admin/check-in"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
+            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
             pathname === '/admin/check-in'
-              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
-              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
           )}
         >
           Check-in
@@ -135,10 +135,10 @@ export function AppHeader() {
         <Link
           href="/admin/payments"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
+            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
             pathname.startsWith('/admin/payments')
-              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
-              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
           )}
         >
           Payments & UTR
@@ -146,10 +146,10 @@ export function AppHeader() {
         <Link
           href="/admin/directory"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
+            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
             pathname.startsWith('/admin/directory')
-              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
-              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
           )}
         >
           Directory
@@ -157,10 +157,10 @@ export function AppHeader() {
         <Link
           href="/admin/id-cards"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
+            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
             pathname.startsWith('/admin/id-cards')
-              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
-              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
           )}
         >
           ID Cards
@@ -168,46 +168,58 @@ export function AppHeader() {
         <Link
           href="/admin/activity"
           className={cn(
-            "px-2.5 py-1 rounded-md transition-colors whitespace-nowrap",
+            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
             pathname.startsWith('/admin/activity')
-              ? "bg-white/[0.1] text-[#F0F0F0] font-semibold border border-white/10"
-              : "text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.04]"
+              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
           )}
         >
           Activity
         </Link>
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
         {/* Live IST Clock */}
         {istDateTime && (
-          <div className="hidden lg:flex items-center gap-1.5 text-xs text-[#B5B5B5] font-mono rounded-lg border border-white/10 bg-white/[0.035] px-2.5 py-1">
-            <Clock className="h-3.5 w-3.5 text-[#808080]" />
+          <div className="hidden xl:flex items-center gap-1.5 text-xs text-[#B5B5B5] font-mono rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 shadow-sm">
+            <Clock className="h-3.5 w-3.5 text-emerald-400" />
             <span>{istDateTime}</span>
           </div>
         )}
 
-        {/* Browser Network Status (Online / Offline) */}
+        {/* Browser Network Status (Online / Offline) with pulsing dot */}
         <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2 py-1',
+            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all',
             isOnline
-              ? 'border-emerald-800/40 bg-emerald-950/40 text-emerald-300'
-              : 'border-red-800/40 bg-red-950/40 text-red-300'
+              ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
+              : 'border-red-500/30 bg-red-950/40 text-red-300 shadow-[0_0_14px_rgba(239,68,68,0.18)]'
           )}
           title={isOnline ? 'Browser is connected to internet' : 'Browser is offline'}
         >
-          {isOnline ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline text-[11px]">{isOnline ? 'Online' : 'Offline'}</span>
+          <span className="relative flex h-2 w-2">
+            {isOnline ? (
+              <>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </>
+            ) : (
+              <>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </>
+            )}
+          </span>
+          <span className="hidden sm:inline text-[11px] font-medium">{isOnline ? 'Online' : 'Offline'}</span>
         </div>
 
-        {/* Google Sheets API Connectivity Status (Sheets Connected / Disconnected) */}
+        {/* Google Sheets API Connectivity Status */}
         <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2 py-1',
+            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all',
             sheetsConnected
-              ? 'border-emerald-800/40 bg-emerald-950/40 text-emerald-300'
-              : 'border-red-800/40 bg-red-950/40 text-red-300'
+              ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
+              : 'border-red-500/30 bg-red-950/40 text-red-300 shadow-[0_0_14px_rgba(239,68,68,0.18)]'
           )}
           title={sheetsConnected ? 'Google Sheets API connected and synchronized' : 'Google Sheets API disconnected'}
         >
@@ -216,7 +228,7 @@ export function AppHeader() {
           ) : (
             <AlertCircle className="h-3.5 w-3.5 text-red-400" />
           )}
-          <span className="hidden sm:inline text-[11px]">
+          <span className="hidden md:inline text-[11px]">
             {sheetsConnected ? 'Sheets Connected' : 'Sheets Disconnected'}
           </span>
         </div>
@@ -227,11 +239,11 @@ export function AppHeader() {
           size="sm"
           onClick={() => syncNow()}
           disabled={syncInProgress || !isOnline}
-          className="h-7 px-2.5 text-xs border-white/10 bg-white/[0.045] hover:bg-white/[0.08]"
+          className="h-8 px-2.5 text-xs border-white/10 hover:border-emerald-500/40 bg-white/[0.045] hover:bg-emerald-950/20 text-[#F0F0F0] hover:text-emerald-300 transition-all shadow-sm"
           title="Refresh registration and attendance data from Google Sheets (Alt + R)"
         >
-          <RefreshCw className={cn('h-3 w-3 mr-1.5', syncInProgress && 'animate-spin')} />
-          <span className="hidden sm:inline">{syncInProgress ? 'Syncing...' : 'Sync'}</span>
+          <RefreshCw className={cn('h-3.5 w-3.5', syncInProgress && 'animate-spin text-emerald-400')} />
+          <span className="hidden sm:inline ml-1.5">{syncInProgress ? 'Syncing...' : 'Sync'}</span>
         </Button>
 
         {/* Keyboard Shortcuts Reference Button */}
@@ -239,7 +251,7 @@ export function AppHeader() {
           variant="outline"
           size="sm"
           onClick={() => setHeaderHelpOpen(true)}
-          className="h-7 px-2 text-xs border-white/10 bg-white/[0.045] hover:bg-white/[0.08] text-[#808080] hover:text-[#F0F0F0]"
+          className="h-8 px-2 text-xs border-white/10 hover:border-white/25 bg-white/[0.045] hover:bg-white/[0.09] text-[#808080] hover:text-[#F0F0F0] transition-all"
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts reference"
         >
@@ -249,14 +261,14 @@ export function AppHeader() {
         {/* Real Signed-in User Info & Sign Out */}
         <div className="flex items-center gap-2 pl-2 border-l border-white/10">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.08] text-xs font-semibold text-[#F0F0F0]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500/25 via-slate-800 to-cyan-500/25 text-xs font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.25)]">
               {user?.email ? user.email[0].toUpperCase() : 'A'}
             </div>
-            <div className="hidden md:flex flex-col">
-              <span className="text-xs text-[#F0F0F0] max-w-[140px] truncate leading-tight">
+            <div className="hidden lg:flex flex-col">
+              <span className="text-xs text-[#F0F0F0] max-w-[130px] truncate leading-tight font-medium">
                 {user?.email || 'Administrator'}
               </span>
-              <span className="text-[10px] text-[#808080] capitalize leading-none">
+              <span className="text-[10px] text-[#808080] capitalize leading-none mt-0.5">
                 {role ? role.replace('_', ' ') : 'Administrator'}
               </span>
             </div>
@@ -266,7 +278,7 @@ export function AppHeader() {
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="h-7 px-2 text-xs text-[#808080] hover:text-red-400 hover:bg-red-950/20 border border-transparent hover:border-red-900/30"
+            className="h-8 px-2 text-xs text-[#808080] hover:text-red-400 hover:bg-red-950/30 border border-transparent hover:border-red-800/40 transition-all rounded-lg"
             title="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />

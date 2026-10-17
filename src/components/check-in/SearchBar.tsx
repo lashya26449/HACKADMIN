@@ -51,7 +51,7 @@ export function SearchBar({
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full pl-10 pr-16 h-11 font-mono text-xs sm:text-sm bg-white/[0.045] border-white/12 text-[#F0F0F0] placeholder:text-[#808080] focus-visible:border-white/35 backdrop-blur-xl shadow-lg rounded-xl"
+        className="w-full pl-10 pr-16 h-11 font-mono text-xs sm:text-sm bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/10 border-t-white/20 text-[#F0F0F0] placeholder:text-[#707070] focus-visible:border-emerald-500/60 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:shadow-[0_0_25px_rgba(16,185,129,0.2)] backdrop-blur-2xl shadow-xl rounded-xl transition-all duration-200"
         aria-label="Search registrations"
         autoComplete="off"
         spellCheck={false}

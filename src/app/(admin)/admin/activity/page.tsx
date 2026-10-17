@@ -148,25 +148,43 @@ export default function ActivityPage() {
       </div>
 
       <Tabs defaultValue="readiness">
-        <TabsList className="mb-4">
-          <TabsTrigger value="readiness">System Readiness</TabsTrigger>
-          <TabsTrigger value="sheet">Google Sheet Health</TabsTrigger>
-          <TabsTrigger value="audit">Audit Trail</TabsTrigger>
+        <TabsList className="mb-4 h-10 border border-white/10 bg-white/[0.035] p-1 text-[#808080] backdrop-blur-xl rounded-xl shadow-inner">
+          <TabsTrigger
+            value="readiness"
+            className="text-xs px-3.5 py-1.5 rounded-lg transition-all duration-200 data-[state=active]:bg-white/[0.12] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-white/20 data-[state=active]:shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+          >
+            System Readiness
+          </TabsTrigger>
+          <TabsTrigger
+            value="sheet"
+            className="text-xs px-3.5 py-1.5 rounded-lg transition-all duration-200 data-[state=active]:bg-white/[0.12] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-white/20 data-[state=active]:shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+          >
+            Google Sheet Health
+          </TabsTrigger>
+          <TabsTrigger
+            value="audit"
+            className="text-xs px-3.5 py-1.5 rounded-lg transition-all duration-200 data-[state=active]:bg-white/[0.12] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-white/20 data-[state=active]:shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+          >
+            Audit Trail
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: System Readiness */}
         <TabsContent value="readiness" className="space-y-4">
-          <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl shadow-xl">
-            <CardHeader className="pb-3 border-b border-white/5">
+          <div className="card-laminated shadow-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-white/5 p-4">
               <CardTitle className="text-sm font-semibold text-[#F0F0F0] flex items-center justify-between">
                 <span>System Readiness Checklist</span>
-                <span className="text-xs font-mono text-emerald-400">All Core Checks Passed</span>
+                <span className="text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  All Core Checks Passed
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-white/5">
                 {readiness.map(item => (
-                  <div key={item.id} className="p-4 flex items-start gap-3">
+                  <div key={item.id} className="p-4 flex items-start gap-3 hover:bg-white/[0.02] transition-colors">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -179,39 +197,39 @@ export default function ActivityPage() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </div>
         </TabsContent>
 
         {/* Tab 2: Google Sheet Health & Diagnostics */}
         <TabsContent value="sheet" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl p-4 space-y-2">
+            <div className="card-laminated p-4 space-y-2">
               <p className="text-xs text-[#808080]">Spreadsheet Target</p>
               <p className="font-mono text-xs text-[#F0F0F0] truncate">{LAKSHYA_SPREADSHEET_ID}</p>
               <p className="text-[10px] text-[#808080]">Worksheet GID: {LAKSHYA_WORKSHEET_GID}</p>
-            </Card>
-            <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl p-4 space-y-2">
+            </div>
+            <div className="card-laminated p-4 space-y-2">
               <p className="text-xs text-[#808080]">Authoritative Columns</p>
               <p className="font-mono text-xs text-[#F0F0F0]">Col O = Team ID &middot; Col P = Attendance</p>
               <p className="text-[10px] text-[#808080]">Col Q = Email Status (Isolated)</p>
-            </Card>
-            <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl p-4 space-y-2">
+            </div>
+            <div className="card-laminated p-4 space-y-2">
               <p className="text-xs text-[#808080]">Inspection Action</p>
               <Button
                 size="sm"
-                variant="outline"
+                variant="illuminated"
                 onClick={handleInspectSheet}
                 disabled={inspecting}
-                className="w-full text-xs h-7 border-white/10"
+                className="w-full text-xs h-8 text-[#F0F0F0] hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
               >
-                <RefreshCw className={`h-3 w-3 mr-1.5 ${inspecting ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3 w-3 mr-1.5 ${inspecting ? 'animate-spin text-emerald-400' : 'text-[#808080]'}`} />
                 {inspecting ? 'Inspecting...' : 'Inspect Live Worksheet'}
               </Button>
-            </Card>
+            </div>
           </div>
 
           {inspectionResult && (
-            <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl p-4 space-y-3">
+            <div className="card-laminated p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-[#F0F0F0]">
                   Inspection Output: {inspectionResult.worksheetName || 'Target Sheet'}
@@ -224,7 +242,7 @@ export default function ActivityPage() {
               {inspectionResult.detectedColumns && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                   {inspectionResult.detectedColumns.map(col => (
-                    <div key={col.letter} className="p-2 rounded-md border border-white/5 bg-white/[0.02] text-xs">
+                    <div key={col.letter} className="p-2.5 rounded-xl border border-white/5 bg-white/[0.025] text-xs">
                       <div className="font-mono font-bold text-[#F0F0F0]">Col {col.letter}</div>
                       <div className="text-[11px] text-[#808080] truncate">{col.headerName}</div>
                       <div className="text-[10px] text-emerald-400 mt-0.5 capitalize">{col.purpose.replace('_', ' ')}</div>
@@ -232,14 +250,14 @@ export default function ActivityPage() {
                   ))}
                 </div>
               )}
-            </Card>
+            </div>
           )}
         </TabsContent>
 
         {/* Tab 3: Audit Trail */}
         <TabsContent value="audit" className="space-y-4">
-          <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl shadow-xl">
-            <CardHeader className="pb-3 border-b border-white/5">
+          <div className="card-laminated shadow-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-white/5 p-4">
               <CardTitle className="text-sm font-semibold text-[#F0F0F0]">
                 Event Day Attendance Audit Trail
               </CardTitle>
@@ -254,7 +272,7 @@ export default function ActivityPage() {
                 <p className="text-[10px] mt-1">Target row and verified write values are stored in system logs.</p>
               </div>
             </CardContent>
-          </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -72,14 +72,15 @@ export default function IdCardsPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by Team ID or Team Name..."
-            className="pl-9 h-9 text-xs"
+            className="pl-9 h-10 text-xs rounded-xl bg-white/[0.035] border-white/10 hover:border-white/20 focus:border-emerald-500/50 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all"
           />
         </div>
         <div className="flex gap-2 text-xs">
-          <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[#B5B5B5]">
+          <span className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-3 py-1.5 text-emerald-300 font-medium shadow-[0_0_12px_rgba(16,185,129,0.15)] flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {teamsWithUploads.length} Teams with Uploads
           </span>
-          <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[#808080]">
+          <span className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-1.5 text-[#808080]">
             {teamsWithoutUploads.length} Pending / No Upload
           </span>
         </div>
@@ -88,32 +89,30 @@ export default function IdCardsPage() {
       {/* Grid of Teams with College ID uploads */}
       {loading ? (
         <div className="p-12 text-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-white mx-auto mb-2" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400 mx-auto mb-2" />
           <p className="text-xs text-[#808080]">Loading registration documents...</p>
         </div>
       ) : filteredTeams.length === 0 ? (
-        <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl">
-          <CardContent className="p-8 text-center">
-            <FileText className="h-8 w-8 text-[#808080] mx-auto mb-2" />
-            <p className="text-sm font-semibold text-[#F0F0F0]">No teams found</p>
-            <p className="text-xs text-[#808080] mt-1">No registration matches search query &quot;{search}&quot;.</p>
-          </CardContent>
-        </Card>
+        <div className="card-laminated p-8 text-center">
+          <FileText className="h-8 w-8 text-[#808080] mx-auto mb-2" />
+          <p className="text-sm font-semibold text-[#F0F0F0]">No teams found</p>
+          <p className="text-xs text-[#808080] mt-1">No registration matches search query &quot;{search}&quot;.</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTeams.map(team => {
             const hasUpload = team.collegeIdUrls && team.collegeIdUrls.length > 0;
             const primaryUrl = hasUpload ? team.collegeIdUrls![0] : null;
             const fileId = primaryUrl ? extractDriveFileId(primaryUrl) : null;
 
             return (
-              <Card
+              <div
                 key={team.teamId}
-                className="flex flex-col justify-between border-white/10 bg-white/[0.045] backdrop-blur-xl text-[#F0F0F0] shadow-lg hover:border-white/20 transition-colors"
+                className="card-laminated flex flex-col justify-between text-[#F0F0F0]"
               >
                 <CardHeader className="p-4 pb-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1 font-mono text-xs font-bold text-[#F0F0F0] bg-white/[0.08] border border-white/10 px-2 py-0.5 rounded-md">
+                    <div className="flex items-center gap-1 font-mono text-xs font-bold text-[#F0F0F0] bg-white/[0.08] border border-white/15 px-2.5 py-0.5 rounded-md shadow-inner">
                       <Hash className="h-3 w-3 text-[#808080]" />
                       {team.teamId}
                     </div>
@@ -125,10 +124,10 @@ export default function IdCardsPage() {
                       <Badge variant="absent" className="text-[10px]">Not Present</Badge>
                     )}
                   </div>
-                  <CardTitle className="text-sm mt-2 truncate font-semibold text-[#F0F0F0]">
+                  <CardTitle className="text-sm mt-2.5 truncate font-semibold text-[#F0F0F0]">
                     {team.teamName}
                   </CardTitle>
-                  <CardDescription className="text-xs flex items-center gap-1 truncate text-[#808080]">
+                  <CardDescription className="text-xs flex items-center gap-1 truncate text-[#808080] mt-0.5">
                     <School className="h-3 w-3 shrink-0" />
                     {team.college || 'Institution unlisted'}
                   </CardDescription>
@@ -136,7 +135,7 @@ export default function IdCardsPage() {
 
                 <CardContent className="p-4 pt-0 space-y-3">
                   {team.leaderName && (
-                    <div className="text-xs text-[#B5B5B5] flex items-center gap-1.5 bg-white/[0.02] border border-white/5 p-2 rounded-md">
+                    <div className="text-xs text-[#B5B5B5] flex items-center gap-1.5 bg-white/[0.025] border border-white/5 p-2 rounded-lg">
                       <User className="h-3.5 w-3.5 text-[#808080] shrink-0" />
                       <span className="truncate">Lead: <strong className="text-[#F0F0F0]">{team.leaderName}</strong></span>
                       {team.degree && <span className="text-[10px] text-[#808080] truncate">({team.degree})</span>}
@@ -144,13 +143,13 @@ export default function IdCardsPage() {
                   )}
 
                   {hasUpload ? (
-                    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-[#F0F0F0] flex items-center gap-1">
-                          <FileText className="h-3.5 w-3.5 text-[#B5B5B5]" />
+                        <span className="font-semibold text-[#F0F0F0] flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5 text-emerald-400" />
                           College ID Card
                         </span>
-                        <span className="text-[10px] text-[#808080] font-mono">
+                        <span className="text-[10px] text-[#808080] font-mono bg-white/[0.05] px-1.5 py-0.5 rounded">
                           {team.collegeIdUrls!.length} file{team.collegeIdUrls!.length > 1 ? 's' : ''}
                         </span>
                       </div>
@@ -158,8 +157,8 @@ export default function IdCardsPage() {
                       <div className="flex items-center gap-2 pt-1">
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="h-7 text-xs flex-1"
+                          variant="illuminated"
+                          className="h-8 text-xs flex-1 text-[#F0F0F0] hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
                           onClick={() =>
                             setSelectedDoc({
                               teamId: team.teamId,
@@ -169,7 +168,7 @@ export default function IdCardsPage() {
                             })
                           }
                         >
-                          <Eye className="h-3 w-3 mr-1" />
+                          <Eye className="h-3 w-3 mr-1 text-emerald-400" />
                           View Document
                         </Button>
 
@@ -177,7 +176,7 @@ export default function IdCardsPage() {
                           href={fileId ? `https://drive.google.com/file/d/${fileId}/view` : primaryUrl!}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-white/10 bg-white/[0.04] text-[#B5B5B5] hover:text-[#F0F0F0] hover:bg-white/[0.08] transition-colors"
+                          className="btn-illuminated inline-flex items-center justify-center h-8 w-8 rounded-lg text-[#B5B5B5] hover:text-[#F0F0F0] hover:border-white/25 transition-all"
                           title="Open original Drive file"
                         >
                           <ExternalLink className="h-3 w-3" />
@@ -185,13 +184,13 @@ export default function IdCardsPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-2.5 flex items-center gap-2 text-xs text-[#808080]">
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-3 flex items-center gap-2 text-xs text-[#808080]">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0 text-[#808080]" />
                       <span>No ID upload recorded for this team.</span>
                     </div>
                   )}
                 </CardContent>
-              </Card>
+              </div>
             );
           })}
         </div>

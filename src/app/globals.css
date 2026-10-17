@@ -26,6 +26,95 @@ body {
   min-height: 100vh;
 }
 
+/* ==============================================================================
+   PREMIUM CUSTOM SCROLLBAR
+   ============================================================================== */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(12, 12, 12, 0.7);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.25s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(12, 12, 12, 0.7);
+}
+
+/* ==============================================================================
+   LAMINATED & ILLUMINATED UTILITIES
+   ============================================================================== */
+.card-laminated {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.065) 0%, rgba(255, 255, 255, 0.02) 100%), #101010;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 1rem;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-laminated:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 16px 38px -10px rgba(0, 0, 0, 0.8), 0 0 24px -6px rgba(16, 185, 129, 0.12);
+  transform: translateY(-1.5px);
+}
+
+.btn-illuminated {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(12px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-illuminated:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  transform: translateY(-0.5px);
+}
+
+.btn-illuminated:active {
+  transform: scale(0.98);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 24px -4px rgba(16, 185, 129, 0.35);
+}
+
+.glow-purple {
+  box-shadow: 0 0 24px -4px rgba(168, 85, 247, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 24px -4px rgba(245, 158, 11, 0.35);
+}
+
+.glow-blue {
+  box-shadow: 0 0 24px -4px rgba(59, 130, 246, 0.35);
+}
+
 .glass-panel {
   background-color: var(--glass-panel);
   border: 1px solid var(--glass-border);
@@ -42,10 +131,12 @@ body {
   background-color: var(--input-bg);
   border: 1px solid var(--input-border);
   color: var(--primary-text);
+  transition: all 0.2s ease;
 }
 
 .glass-input:focus {
   border-color: var(--focus-border);
+  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.2);
   outline: none;
 }
 

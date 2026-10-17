@@ -58,26 +58,27 @@ export function TeamCard({
         id={`team-card-${team.teamId}`}
         onClick={onSelect}
         className={cn(
-          'w-full rounded-xl border border-white/10 bg-white/[0.045] backdrop-blur-xl text-[#F0F0F0] shadow-md transition-all duration-200 cursor-pointer',
-          'p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4',
-          isSelected && 'ring-2 ring-emerald-500/70 border-emerald-500/60 bg-white/[0.08] shadow-emerald-950/40 shadow-lg',
-          isPresent && !isSelected && 'border-emerald-800/40 bg-emerald-950/20',
+          'w-full rounded-2xl border border-white/10 border-t-white/20 bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-2xl text-[#F0F0F0] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6)] transition-all duration-200 cursor-pointer',
+          'p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4',
+          'hover:border-white/20 hover:border-t-white/35 hover:shadow-[0_12px_32px_-6px_rgba(0,0,0,0.8),0_0_20px_-6px_rgba(16,185,129,0.12)] hover:-translate-y-0.5',
+          isSelected && 'ring-2 ring-emerald-500/80 border-emerald-500/60 bg-emerald-950/15 shadow-[0_0_25px_rgba(16,185,129,0.25)]',
+          isPresent && !isSelected && 'border-emerald-500/30 border-t-emerald-400/40 bg-emerald-950/20',
           isPresent && isSelected && 'border-emerald-500/80 bg-emerald-950/30',
-          isProcessing && 'border-white/30 ring-1 ring-white/20',
-          localError && 'border-red-800/50 bg-red-950/20',
-          isDuplicate && 'border-amber-800/50 bg-amber-950/20'
+          isProcessing && 'border-cyan-500/40 ring-1 ring-cyan-500/30',
+          localError && 'border-red-500/40 bg-red-950/20',
+          isDuplicate && 'border-amber-500/40 bg-amber-950/20'
         )}
       >
         {/* LEFT AREA — TEAM IDENTIFICATION */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 min-w-0">
-            {/* 1. Team ID */}
-            <span className="font-mono text-xs font-bold text-[#F0F0F0] bg-white/[0.08] border border-white/12 px-2.5 py-1 rounded-md shrink-0 tracking-wide">
+            {/* 1. Team ID Badge */}
+            <span className="font-mono text-xs font-bold text-white bg-gradient-to-b from-white/[0.14] to-white/[0.04] border border-white/15 border-t-white/30 px-2.5 py-1 rounded-lg shrink-0 tracking-wider shadow-sm">
               {team.teamId}
             </span>
 
             {isSelected && (
-              <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40 animate-in fade-in-0">
+              <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-emerald-300 bg-emerald-950/90 px-2 py-0.5 rounded-md border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.25)] animate-in fade-in-0 font-medium">
                 Selected &middot; Enter / Alt+P
               </span>
             )}
@@ -85,7 +86,7 @@ export function TeamCard({
             <span className="text-white/20 hidden sm:inline select-none">|</span>
 
             {/* 2. Team Name */}
-            <span className="text-sm font-semibold text-[#F0F0F0] truncate max-w-[220px] lg:max-w-[320px]" title={team.teamName}>
+            <span className="text-sm font-semibold text-[#F0F0F0] truncate max-w-[220px] lg:max-w-[320px] tracking-tight" title={team.teamName}>
               {team.teamName || 'Untitled Team'}
             </span>
 
@@ -124,17 +125,17 @@ export function TeamCard({
           {/* MIDDLE AREA — ATTENDANCE STATUS */}
           <div className="shrink-0">
             {isPresent ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-emerald-950/60 border border-emerald-800/60 text-emerald-300">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold font-mono tracking-wider bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                 PRESENT
               </span>
             ) : isProcessing ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-blue-950/40 border border-blue-800/40 text-blue-300">
-                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium font-mono bg-blue-950/40 border border-blue-500/40 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-cyan-400" />
                 VERIFYING...
               </span>
             ) : (
-              <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-white/[0.04] border border-white/10 text-[#808080]">
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium font-mono tracking-wider bg-white/[0.03] border border-white/10 text-[#757575]">
                 NOT PRESENT
               </span>
             )}
@@ -146,7 +147,7 @@ export function TeamCard({
               <Button
                 size="sm"
                 disabled
-                className="h-9 px-4 text-xs font-semibold bg-white/[0.03] border border-white/10 text-[#808080] opacity-50 cursor-not-allowed"
+                className="h-9 px-4 text-xs font-semibold bg-white/[0.03] border border-white/10 text-[#606060] opacity-50 cursor-not-allowed rounded-lg"
               >
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
                 Present
@@ -156,7 +157,7 @@ export function TeamCard({
                 size="sm"
                 onClick={() => onRequestCheckIn ? onRequestCheckIn() : setDialogOpen(true)}
                 disabled={isProcessing || !canCheckIn || isDuplicate}
-                className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95 transition-all"
+                className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-400/30 border-t-emerald-300/50 shadow-[0_0_20px_-3px_rgba(16,185,129,0.4)] hover:shadow-[0_0_28px_0_rgba(16,185,129,0.55)] active:scale-95 transition-all"
               >
                 {isProcessing ? (
                   <>

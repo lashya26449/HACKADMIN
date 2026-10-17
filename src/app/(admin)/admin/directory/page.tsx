@@ -128,24 +128,25 @@ export default function RegistrationDirectoryPage() {
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="illuminated"
             size="sm"
             onClick={() => syncNow()}
             disabled={syncInProgress}
-            className="h-8 text-xs border-white/10"
+            className="h-8.5 text-xs text-[#F0F0F0] hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
           >
-            <RefreshCw className={`h-3 w-3 mr-1.5 ${syncInProgress ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 mr-1.5 ${syncInProgress ? 'animate-spin text-emerald-400' : 'text-[#808080]'}`} />
             Sync Sheet
           </Button>
 
           {canExport && (
             <Button
+              variant="illuminated"
               size="sm"
               onClick={handleExportCSV}
               disabled={exporting || filteredTeams.length === 0}
-              className="h-8 text-xs"
+              className="h-8.5 text-xs text-[#F0F0F0] hover:border-purple-500/40 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
             >
-              <Download className="h-3 w-3 mr-1.5" />
+              <Download className="h-3 w-3 mr-1.5 text-purple-400" />
               Export CSV
             </Button>
           )}
@@ -160,17 +161,17 @@ export default function RegistrationDirectoryPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by Team ID, team name, lead, college, phone, email..."
-            className="pl-9 h-9 text-xs"
+            className="pl-9 h-10 text-xs rounded-xl bg-white/[0.035] border-white/10 hover:border-white/20 focus:border-emerald-500/50 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all"
           />
         </div>
 
         {colleges.length > 0 && (
-          <div className="w-full sm:w-52">
+          <div className="w-full sm:w-56">
             <Select value={collegeFilter} onValueChange={setCollegeFilter}>
-              <SelectTrigger className="h-9 text-xs">
+              <SelectTrigger className="h-10 text-xs rounded-xl bg-white/[0.035] border-white/10 hover:border-white/20 focus:border-emerald-500/50">
                 <SelectValue placeholder="All Colleges" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#101010] border-white/15 backdrop-blur-2xl">
                 <SelectItem value="all">All Colleges ({teams.length})</SelectItem>
                 {colleges.map(col => (
                   <SelectItem key={col} value={col}>
@@ -182,12 +183,12 @@ export default function RegistrationDirectoryPage() {
           </div>
         )}
 
-        <div className="w-full sm:w-40">
+        <div className="w-full sm:w-44">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 text-xs">
+            <SelectTrigger className="h-10 text-xs rounded-xl bg-white/[0.035] border-white/10 hover:border-white/20 focus:border-emerald-500/50">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#101010] border-white/15 backdrop-blur-2xl">
               <SelectItem value="all">All Attendance</SelectItem>
               <SelectItem value="present">Present Only</SelectItem>
               <SelectItem value="absent">Not Marked</SelectItem>
@@ -197,19 +198,19 @@ export default function RegistrationDirectoryPage() {
       </div>
 
       {/* Directory Table */}
-      <Card className="border-white/10 bg-white/[0.045] backdrop-blur-xl overflow-hidden shadow-2xl">
+      <div className="card-laminated overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.03] text-[#808080] font-medium">
-                  <th className="py-3 px-4">Team ID</th>
-                  <th className="py-3 px-4">Team &amp; Leader</th>
-                  <th className="py-3 px-4">College</th>
-                  <th className="py-3 px-4">Contact</th>
-                  <th className="py-3 px-4">Payment UTR</th>
-                  <th className="py-3 px-4 text-center">Attendance</th>
-                  <th className="py-3 px-4 text-center">Row</th>
+                <tr className="border-b border-white/10 bg-white/[0.04] text-[#808080] font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 px-4">Team ID</th>
+                  <th className="py-3.5 px-4">Team &amp; Leader</th>
+                  <th className="py-3.5 px-4">College</th>
+                  <th className="py-3.5 px-4">Contact</th>
+                  <th className="py-3.5 px-4">Payment UTR</th>
+                  <th className="py-3.5 px-4 text-center">Attendance</th>
+                  <th className="py-3.5 px-4 text-center">Row</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-[#F0F0F0]">
@@ -274,7 +275,7 @@ export default function RegistrationDirectoryPage() {
             </table>
           </div>
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

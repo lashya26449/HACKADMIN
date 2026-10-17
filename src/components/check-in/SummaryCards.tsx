@@ -53,20 +53,20 @@ export function SummaryCards({ total, present, loading }: SummaryCardsProps) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {cards.map(card => (
-          <Card key={card.label} className="bg-white/[0.045] border border-white/10 text-[#F0F0F0] backdrop-blur-xl shadow-lg">
+          <Card key={card.label} className="card-laminated border border-white/10 border-t-white/20 bg-gradient-to-b from-white/[0.07] to-white/[0.02] text-[#F0F0F0] backdrop-blur-2xl shadow-xl hover:border-white/20 hover:-translate-y-0.5 transition-all duration-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-[#808080]">{card.label}</p>
+                  <p className="text-xs font-medium text-[#808080] uppercase tracking-wider">{card.label}</p>
                   {loading ? (
                     <div className="mt-1 h-7 w-12 animate-pulse rounded bg-white/[0.08]" />
                   ) : (
                     <p className="mt-0.5 text-2xl font-bold tracking-tight text-[#F0F0F0] font-mono">{card.value}</p>
                   )}
-                  <p className="text-[10px] text-[#808080] mt-0.5">{card.subtext}</p>
+                  <p className="text-[10px] text-[#707070] mt-0.5">{card.subtext}</p>
                 </div>
-                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${card.bg}`}>
-                  <card.icon className={`h-4.5 w-4.5 ${card.color}`} />
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.bg} shadow-md`}>
+                  <card.icon className={`h-5 w-5 ${card.color}`} />
                 </div>
               </div>
             </CardContent>

@@ -467,40 +467,40 @@ export default function CheckInPage() {
           </div>
 
           {/* Quick Desk Action Buttons (Equivalent Clickable Controls for Mouse/Touch) */}
-          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
             <Button
-              variant="outline"
+              variant={quickScanActive ? 'emerald' : 'illuminated'}
               size="sm"
               onClick={() => setQuickScanActive(prev => !prev)}
-              className={`h-11 px-3 text-xs border-white/10 transition-colors ${
+              className={`h-11 px-3.5 text-xs transition-all duration-200 ${
                 quickScanActive
-                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
-                  : 'bg-white/[0.045] text-[#F0F0F0] hover:bg-white/[0.08]'
+                  ? 'glow-emerald'
+                  : 'hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]'
               }`}
               title="Toggle Quick Scan Barcode Mode (Alt + Q)"
             >
               <Scan className="h-4 w-4 mr-1.5" />
-              <span className="hidden md:inline">Scan</span>
-              <kbd className="hidden lg:inline ml-1.5 text-[10px] font-mono text-[#808080] bg-white/[0.06] px-1 py-0.5 rounded">Alt+Q</kbd>
+              <span className="hidden md:inline font-medium">Scan</span>
+              <kbd className="hidden lg:inline ml-1.5 text-[10px] font-mono text-[#808080] bg-white/[0.08] px-1.5 py-0.5 rounded border border-white/10">Alt+Q</kbd>
             </Button>
 
             <Button
-              variant="outline"
+              variant="illuminated"
               size="sm"
               onClick={() => setExportOpen(true)}
-              className="h-11 px-3 text-xs border-white/10 bg-white/[0.045] text-[#F0F0F0] hover:bg-white/[0.08]"
+              className="h-11 px-3.5 text-xs text-[#F0F0F0] hover:border-purple-500/40 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all duration-200"
               title="Export Registrations & Attendance (Alt + E)"
             >
               <Download className="h-4 w-4 mr-1.5" />
-              <span className="hidden md:inline">Export</span>
-              <kbd className="hidden lg:inline ml-1.5 text-[10px] font-mono text-[#808080] bg-white/[0.06] px-1 py-0.5 rounded">Alt+E</kbd>
+              <span className="hidden md:inline font-medium">Export</span>
+              <kbd className="hidden lg:inline ml-1.5 text-[10px] font-mono text-[#808080] bg-white/[0.08] px-1.5 py-0.5 rounded border border-white/10">Alt+E</kbd>
             </Button>
 
             <Button
-              variant="outline"
+              variant="illuminated"
               size="sm"
               onClick={() => setHelpOpen(true)}
-              className="h-11 px-2.5 text-xs border-white/10 bg-white/[0.045] text-[#808080] hover:text-[#F0F0F0] hover:bg-white/[0.08]"
+              className="h-11 px-3 text-xs text-[#808080] hover:text-[#F0F0F0] hover:border-white/30 transition-all duration-200"
               title="Keyboard Shortcuts Reference (?)"
               aria-label="Keyboard shortcuts reference"
             >
