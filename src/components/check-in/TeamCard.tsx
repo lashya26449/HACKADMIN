@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import {
-  CheckCircle2, Loader2, AlertTriangle, ArrowRight
+  CheckCircle2, Loader2, AlertTriangle, ArrowRight, MapPin, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -218,6 +218,28 @@ export function TeamCard({
               <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
                 &apos;P&apos; <ArrowRight className="h-3 w-3 text-[#808080]" />
               </span>
+            </div>
+          </div>
+
+          {/* Venue Arrival Directions Notice */}
+          <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3 space-y-1.5 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+            <div className="flex items-center gap-2 text-purple-300 font-semibold text-xs">
+              <MapPin className="h-4 w-4 text-purple-400 shrink-0" />
+              <span>Venue Arrival Instructions</span>
+            </div>
+            <div className="text-[11px] space-y-0.5 pl-6 text-[#E0E0E0]">
+              <p>
+                <span className="text-[#888888]">Destination: </span>
+                <strong className="text-white">CSE Seminar Hall</strong>
+              </p>
+              <p>
+                <span className="text-[#888888]">Directions: </span>
+                <strong className="text-purple-300">Go straight and take a left</strong>
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-purple-300/80 pl-6 pt-1">
+              <Mail className="h-3 w-3 text-purple-400" />
+              <span>Arrival directions email automatically triggered to team lead</span>
             </div>
           </div>
 

@@ -51,6 +51,7 @@ function mapHeaders(headers) {
   let paymentCol = '';
   let memberCountCol = '';
   let whatsappCol = '';
+  let attendanceEmailCol = '';
 
   headers.forEach((header, idx) => {
     const letter = indexToColumnLetter(idx);
@@ -69,8 +70,10 @@ function mapHeaders(headers) {
       collegeCol = letter;
     } else if (/degree|program|department|branch|course|year/.test(norm)) {
       degreeCol = letter;
-    } else if (/email\s*status|mail\s*status/.test(norm) || (norm.includes('email') && norm.includes('status'))) {
+    } else if ((/email\s*status|mail\s*status/.test(norm) || (norm.includes('email') && norm.includes('status'))) && !norm.includes('attendance') && !norm.includes('check in')) {
       emailStatusCol = letter;
+    } else if (/attendance.*(email|mail)|directions.*(email|mail)/.test(norm)) {
+      attendanceEmailCol = letter;
     } else if (/email|mail/.test(norm) && !leaderEmailCol && !norm.includes('status')) {
       leaderEmailCol = letter;
     } else if (/whatsapp\s*confirmation|whatsapp\s*link|whatsapp\s*msg/.test(norm)) {
@@ -92,6 +95,7 @@ function mapHeaders(headers) {
     collegeCol,
     attendanceCol,
     emailStatusCol,
+    attendanceEmailCol,
     leaderNameCol,
     leaderEmailCol,
     leaderPhoneCol,
@@ -773,6 +777,44 @@ test('22. Column R WhatsApp Confirmation: header mapping, phone normalization, U
   assert.notEqual(mapped.whatsappCol, mapped.attendanceCol);
   assert.notEqual(mapped.whatsappCol, mapped.emailStatusCol);
 });
+
+test('23. Column S Attendance Email Status: directions to CSE Seminar Hall, column isolation and safety', () => {
+  const headersWithS = [
+    ...LIVE_HEADERS,
+    "WhatsApp Confirmation",  // Col R (index 17)
+    "Attendance Email Status" // Col S (index 18)
+  ];
+
+  const mapped = mapHeaders(headersWithS);
+
+  // Column verifications
+  assert.equal(mapped.teamIdCol, 'O', 'Team ID must remain Column O');
+  assert.equal(mapped.attendanceCol, 'P', 'Attendance must remain Column P');
+  assert.equal(mapped.emailStatusCol, 'Q', 'Registration Email Status must remain Column Q');
+  assert.equal(mapped.whatsappCol, 'R', 'WhatsApp Confirmation must remain Column R');
+  assert.equal(mapped.attendanceEmailCol, 'S', 'Attendance Email Status must be mapped to Column S');
+
+  // Verify Column S does not collide with Column Q or Column P
+  assert.notEqual(mapped.attendanceEmailCol, mapped.emailStatusCol, 'Attendance Email Status must NOT overwrite Column Q');
+  assert.notEqual(mapped.attendanceEmailCol, mapped.attendanceCol, 'Attendance Email Status must NOT overwrite Column P');
+
+  // Arrival directions template validation
+  const venue = "CSE Seminar Hall";
+  const directions = "Go straight and take a left";
+  const teamName = "Byte Busters";
+  const teamId = "LAK-001";
+  const leadName = "Keshav n gowda";
+
+  const expectedSubject = `LAKSHYA 2026 | Attendance Confirmed — Move to ${venue}`;
+  assert.match(expectedSubject, /CSE Seminar Hall/);
+
+  const directionsBody = `Hello ${teamName}!\n\nYour attendance for LAKSHYA 2026 has been marked as PRESENT.\n\nVENUE & ARRIVAL DIRECTIONS:\n📍 Destination: ${venue}\n🚶 Directions: ${directions}\n\nTEAM DETAILS:\n• Team ID: ${teamId}\n• Team Name: ${teamName}\n• Team Lead: ${leadName}`;
+
+  assert.ok(directionsBody.includes("CSE Seminar Hall"));
+  assert.ok(directionsBody.includes("Go straight and take a left"));
+  assert.ok(directionsBody.includes("LAK-001"));
+});
+
 
 
 

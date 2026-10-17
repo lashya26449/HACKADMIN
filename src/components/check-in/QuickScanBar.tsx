@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { trimTeamId } from '@/lib/utils';
 import type { Team } from '@/types';
 import { toast } from 'sonner';
+import { sound } from '@/lib/audio';
 
 interface QuickScanBarProps {
   active: boolean;
@@ -78,10 +79,14 @@ export function QuickScanBar({
     );
 
     if (!found) {
+      sound.playWarningTone();
       setErrorMsg(`Scanned Team ID "${candidateId}" not found in spreadsheet.`);
       toast.error(`Team "${candidateId}" not found.`);
       return;
     }
+
+    // Play crisp scanner beep
+    sound.playScanBeep();
 
     setErrorMsg(null);
     setLastScannedTeam(found);

@@ -232,9 +232,13 @@ export async function inspectAndMapHeaders(
       purpose = 'Degree / Branch';
     }
     // 7. Email Status (explicit: email + status, e.g. "Email Status")
-    else if (/email\s*status|mail\s*status/.test(norm) || (norm.includes('email') && norm.includes('status'))) {
+    else if ((/email\s*status|mail\s*status/.test(norm) || (norm.includes('email') && norm.includes('status'))) && !norm.includes('attendance') && !norm.includes('check in')) {
       emailStatusCol = letter;
       purpose = 'Email Status';
+    }
+    // 7b. Attendance Email Status (e.g. "Attendance Email Status" / directions mail)
+    else if (/attendance\s*(email|mail)|check\s*in\s*(email|mail)/.test(norm)) {
+      purpose = 'Attendance Email Status';
     }
     // 8. Leader Email (contains email/mail, but strictly NOT email status)
     else if (/email|mail/.test(norm) && !leaderEmailCol && !norm.includes('status')) {
@@ -638,6 +642,12 @@ export async function writeAttendance(
     return {
       success: false,
       error: `Safety Guard Violation: Attendance write attempted to target Column Q (Email Status). Attendance must write strictly to Column P.`,
+    };
+  }
+  if (config.attendanceColumn.toUpperCase() === 'S') {
+    return {
+      success: false,
+      error: `Safety Guard Violation: Attendance write attempted to target Column S (Attendance Email Status). Attendance must write strictly to Column P.`,
     };
   }
 

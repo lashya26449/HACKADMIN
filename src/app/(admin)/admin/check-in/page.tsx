@@ -26,7 +26,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail } from 'lucide-react';
+import { sound } from '@/lib/audio';
 
 export default function CheckInPage() {
   const { user, role, getIdToken } = useAuth();
@@ -146,7 +147,13 @@ export default function CheckInPage() {
       const data = await res.json().catch(() => ({}));
 
       if (data.success || res.ok) {
-        toast.success(`Team ${teamId} attendance verified & written to Column P!`);
+        // Play crisp check-in success chime
+        sound.playSuccessChime();
+
+        toast.success(
+          `Team ${teamId} Checked In! Move to CSE Seminar Hall (Go straight and take a left) 📍 Arrival mail triggered.`,
+          { duration: 6000 }
+        );
 
         // Update local state to Present
         updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
@@ -162,13 +169,15 @@ export default function CheckInPage() {
           timestamp: new Date().toISOString(),
         };
         setRecentActivity(prev => [entry, ...prev].slice(0, 30));
-        setAnnouncement(`Team ${teamId} verified and marked present.`);
+        setAnnouncement(`Team ${teamId} verified and marked present. Move to CSE Seminar Hall.`);
       } else {
+        sound.playWarningTone();
         // Fallback: still mark present locally so event check-in desk is never blocked
         updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
         toast.warning(`Marked present locally. Note: ${data.error || 'Server sync pending'}`);
       }
     } catch {
+      sound.playWarningTone();
       // Offline / network failure fallback
       updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
       toast.warning(`Marked present locally (offline/network pending)`);
@@ -545,44 +554,68 @@ export default function CheckInPage() {
           </DialogHeader>
 
           {confirmingTeam && (
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3.5 space-y-2 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-white/5">
-                <span className="text-[#808080]">Team ID</span>
-                <span className="font-mono font-bold text-[#F0F0F0]">{confirmingTeam.teamId}</span>
+            <div className="space-y-3">
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3.5 space-y-2 text-xs">
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-[#808080]">Team ID</span>
+                  <span className="font-mono font-bold text-[#F0F0F0]">{confirmingTeam.teamId}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-[#808080]">Team Name</span>
+                  <span className="font-medium text-[#F0F0F0] truncate max-w-[220px]">
+                    {confirmingTeam.teamName}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-[#808080]">Lead Name</span>
+                  <span className="text-[#B5B5B5] truncate max-w-[220px]">
+                    {confirmingTeam.leaderName || 'Unassigned'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-[#808080]">College</span>
+                  <span className="text-[#B5B5B5] truncate max-w-[220px]">
+                    {confirmingTeam.college || 'Unlisted'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-[#808080]">Target Row</span>
+                  <span className="font-mono text-[#F0F0F0]">Row {confirmingTeam.rowIndex ?? 'Auto-detect'}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-[#808080]">Attendance Cell</span>
+                  <span className="font-mono font-bold text-emerald-400">
+                    {confirmingTeam.rowIndex ? `P${confirmingTeam.rowIndex}` : 'Column P'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-[#808080]">Proposed Value</span>
+                  <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
+                    &apos;P&apos; <ArrowRight className="h-3 w-3 text-[#808080]" />
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-white/5">
-                <span className="text-[#808080]">Team Name</span>
-                <span className="font-medium text-[#F0F0F0] truncate max-w-[220px]">
-                  {confirmingTeam.teamName}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-white/5">
-                <span className="text-[#808080]">Lead Name</span>
-                <span className="text-[#B5B5B5] truncate max-w-[220px]">
-                  {confirmingTeam.leaderName || 'Unassigned'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-white/5">
-                <span className="text-[#808080]">College</span>
-                <span className="text-[#B5B5B5] truncate max-w-[220px]">
-                  {confirmingTeam.college || 'Unlisted'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-white/5">
-                <span className="text-[#808080]">Target Row</span>
-                <span className="font-mono text-[#F0F0F0]">Row {confirmingTeam.rowIndex ?? 'Auto-detect'}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-white/5">
-                <span className="text-[#808080]">Attendance Cell</span>
-                <span className="font-mono font-bold text-emerald-400">
-                  {confirmingTeam.rowIndex ? `P${confirmingTeam.rowIndex}` : 'Column P'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-[#808080]">Proposed Value</span>
-                <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
-                  &apos;P&apos; <ArrowRight className="h-3 w-3 text-[#808080]" />
-                </span>
+
+              {/* Venue Arrival Directions Notice */}
+              <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3 space-y-1.5 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                <div className="flex items-center gap-2 text-purple-300 font-semibold text-xs">
+                  <MapPin className="h-4 w-4 text-purple-400 shrink-0" />
+                  <span>Venue Arrival Instructions</span>
+                </div>
+                <div className="text-[11px] space-y-0.5 pl-6 text-[#E0E0E0]">
+                  <p>
+                    <span className="text-[#888888]">Destination: </span>
+                    <strong className="text-white">CSE Seminar Hall</strong>
+                  </p>
+                  <p>
+                    <span className="text-[#888888]">Directions: </span>
+                    <strong className="text-purple-300">Go straight and take a left</strong>
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-purple-300/80 pl-6 pt-1">
+                  <Mail className="h-3 w-3 text-purple-400" />
+                  <span>Arrival directions email automatically triggered to team lead</span>
+                </div>
               </div>
             </div>
           )}
