@@ -4,7 +4,7 @@ import {
   CreditCard, Search, Download, Printer, ExternalLink,
   Copy, Check, AlertCircle, RefreshCw,
   Hash, School, User, Phone, CheckCircle2,
-  Clock, Link as LinkIcon
+  Clock
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 type PaymentFilter = 'all' | 'utr_submitted' | 'utr_missing' | 'has_proof' | 'present';
-type TimestampDisplayOption = 'timings' | 'timestamp_link';
 
 const SPREADSHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d/11xu3PH0OzCCYMDq6LGrdiy7ANcluOHUYlBXJYWMXDQs/edit#gid=1086772870';
 
@@ -88,7 +87,6 @@ export default function PaymentsPage() {
   const { getIdToken } = useAuth();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PaymentFilter>('all');
-  const [timestampOption, setTimestampOption] = useState<TimestampDisplayOption>('timings');
   const [copiedUtr, setCopiedUtr] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [printDate, setPrintDate] = useState('');
@@ -344,50 +342,16 @@ export default function PaymentsPage() {
           </Card>
         </div>
 
-        {/* Search & Filter Bar + Timings/Timestamp Two Options */}
-        <div className="flex flex-col gap-3 p-3.5 rounded-2xl border border-white/10 border-t-white/20 bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-2xl shadow-xl">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#707070]" />
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search by UTR number, Team ID, Team Name, Leader Name, Phone, or Timestamp..."
-                className="pl-10 h-10 border-white/10 border-t-white/20 bg-white/[0.04] text-xs text-[#F0F0F0] placeholder:text-[#656565] focus-visible:border-emerald-500/60 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:shadow-[0_0_20px_rgba(16,185,129,0.2)] rounded-xl transition-all"
-              />
-            </div>
-
-            {/* Timings vs Timestamp Link Options */}
-            <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/10 shrink-0">
-              <span className="text-[10px] text-[#808080] px-1 font-medium uppercase tracking-wider">Display:</span>
-              <button
-                type="button"
-                onClick={() => setTimestampOption('timings')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-all duration-200 cursor-pointer ${
-                  timestampOption === 'timings'
-                    ? 'bg-emerald-600 text-white font-semibold border border-emerald-400/40 border-t-emerald-300/50 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
-                    : 'text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.05]'
-                }`}
-                title="Option 1: Show Clock Timings (Time / Date)"
-              >
-                <Clock className="h-3.5 w-3.5" />
-                <span>Clock Timings</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTimestampOption('timestamp_link')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-all duration-200 cursor-pointer ${
-                  timestampOption === 'timestamp_link'
-                    ? 'bg-emerald-600 text-white font-semibold border border-emerald-400/40 border-t-emerald-300/50 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
-                    : 'text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.05]'
-                }`}
-                title="Option 2: Show Timestamp Link to Spreadsheet row"
-              >
-                <LinkIcon className="h-3.5 w-3.5" />
-                <span>Timestamp Link</span>
-              </button>
-            </div>
+        {/* Full-Width Search & Filter Bar */}
+        <div className="flex flex-col gap-3.5 p-3.5 rounded-2xl border border-white/10 border-t-white/20 bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-2xl shadow-xl">
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#707070]" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by UTR number, Team ID, Team Name, Leader Name, Phone, or Timing..."
+              className="w-full pl-10 h-11 border-white/10 border-t-white/20 bg-white/[0.04] text-xs sm:text-sm text-[#F0F0F0] placeholder:text-[#656565] focus-visible:border-emerald-500/60 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:shadow-[0_0_20px_rgba(16,185,129,0.2)] rounded-xl transition-all"
+            />
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 border-t border-white/5 pt-2">
@@ -459,9 +423,7 @@ export default function PaymentsPage() {
                     <th className="py-3 px-4 min-w-[170px]">Team & College</th>
                     <th className="py-3 px-4 min-w-[160px]">Team Lead</th>
                     <th className="py-3 px-4 min-w-[180px]">UTR / Transaction Ref</th>
-                    <th className="py-3 px-4 min-w-[180px]">
-                      {timestampOption === 'timings' ? 'Payment Timings' : 'Timestamp Link'}
-                    </th>
+                    <th className="py-3 px-4 min-w-[180px]">Payment Timings</th>
                     <th className="py-3 px-4 min-w-[150px]">Payment Proof</th>
                     <th className="py-3 px-3.5 text-center w-24">Attendance</th>
                   </tr>
@@ -471,7 +433,6 @@ export default function PaymentsPage() {
                     const hasUtr = Boolean(team.paymentRef && team.paymentRef.trim().length > 0);
                     const hasProof = Boolean(team.paymentProofUrl && team.paymentProofUrl.trim().length > 0);
                     const timing = formatTiming(team.registeredAt);
-                    const sheetRowUrl = `${SPREADSHEET_BASE_URL}&range=A${team.rowIndex || idx + 2}`;
 
                     return (
                       <tr key={team.teamId} className="hover:bg-white/[0.04] transition-colors group">
@@ -547,35 +508,17 @@ export default function PaymentsPage() {
                           )}
                         </td>
 
-                        {/* Timings & Timestamp Link (Option 1 vs Option 2) */}
+                        {/* Payment Timings */}
                         <td className="py-3.5 px-4">
-                          {timestampOption === 'timings' ? (
-                            // Option 1: Clock Timings View
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-1.5 text-xs text-[#E0E0E0] font-mono">
-                                <Clock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                                <span className="font-semibold">{timing.time}</span>
-                              </div>
-                              {timing.date && (
-                                <span className="text-[10px] text-[#808080] ml-5">{timing.date}</span>
-                              )}
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5 text-xs text-[#E0E0E0] font-mono">
+                              <Clock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span className="font-semibold">{timing.time}</span>
                             </div>
-                          ) : (
-                            // Option 2: Direct Timestamp Link View
-                            <a
-                              href={sheetRowUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono rounded-lg border border-white/10 border-t-white/20 bg-white/[0.04] hover:bg-emerald-500/15 hover:border-emerald-500/40 text-emerald-400 hover:text-emerald-300 transition-all shadow-sm"
-                              title="Open row in Google Spreadsheet"
-                            >
-                              <LinkIcon className="h-3 w-3 shrink-0" />
-                              <span className="truncate max-w-[130px]">
-                                {team.registeredAt || `Row ${team.rowIndex || idx + 2}`}
-                              </span>
-                              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-60" />
-                            </a>
-                          )}
+                            {timing.date && (
+                              <span className="text-[10px] text-[#808080] ml-5">{timing.date}</span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Payment Proof / Photo: Directly opens link everywhere with NO preview popups */}

@@ -203,69 +203,102 @@ export default function RegistrationDirectoryPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.04] text-[#808080] font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3.5 px-4">Team ID</th>
-                  <th className="py-3.5 px-4">Team &amp; Leader</th>
-                  <th className="py-3.5 px-4">College</th>
-                  <th className="py-3.5 px-4">Contact</th>
-                  <th className="py-3.5 px-4">Payment UTR</th>
-                  <th className="py-3.5 px-4 text-center">Attendance</th>
-                  <th className="py-3.5 px-4 text-center">Row</th>
+                <tr className="border-b border-white/10 bg-white/[0.04] text-[#909090] font-bold uppercase tracking-wider text-xs">
+                  <th className="py-4 px-4">Team ID</th>
+                  <th className="py-4 px-4 min-w-[200px]">Team &amp; Leader</th>
+                  <th className="py-4 px-4 min-w-[200px]">College / Degree</th>
+                  <th className="py-4 px-4 min-w-[180px]">Contact Info</th>
+                  <th className="py-4 px-4 min-w-[160px]">Payment UTR</th>
+                  <th className="py-4 px-4 text-center">Attendance</th>
+                  <th className="py-4 px-4 text-center">Row</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-[#F0F0F0]">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-[#808080]">
-                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-[#808080]" />
-                      Loading registrations from Google Sheets...
+                    <td colSpan={7} className="py-16 text-center text-[#808080]">
+                      <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-emerald-400" />
+                      <span className="text-sm">Loading registrations from Google Sheets...</span>
                     </td>
                   </tr>
                 ) : filteredTeams.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-[#808080]">
+                    <td colSpan={7} className="py-16 text-center text-[#808080] text-sm">
                       No registrations match the selected search or filter criteria.
                     </td>
                   </tr>
                 ) : (
                   filteredTeams.map(team => (
-                    <tr key={team.teamId} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-[#F0F0F0]">
-                        <span className="bg-white/[0.06] border border-white/10 px-2 py-0.5 rounded">
+                    <tr key={team.teamId} className="hover:bg-white/[0.03] transition-colors group">
+                      <td className="py-4 px-4">
+                        <span className="font-mono text-sm font-bold text-white bg-white/[0.08] border border-white/15 px-3 py-1 rounded-lg shadow-sm">
                           {team.teamId}
                         </span>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-[#F0F0F0]">{team.teamName}</div>
+                      <td className="py-4 px-4">
+                        <div className="font-bold text-base text-white group-hover:text-emerald-400 transition-colors">
+                          {team.teamName}
+                        </div>
                         {team.leaderName && (
-                          <div className="text-[11px] text-[#808080]">Lead: {team.leaderName}</div>
+                          <div className="text-sm text-[#D4D4D4] font-medium mt-0.5">
+                            <span className="text-[#808080]">Lead:</span> {team.leaderName}
+                          </div>
                         )}
                         {team.memberCount && (
-                          <div className="text-[10px] text-[#808080]">{team.memberCount} members</div>
+                          <div className="mt-1">
+                            <span className="text-xs font-medium text-emerald-300 bg-emerald-950/50 border border-emerald-500/30 px-2 py-0.5 rounded-md inline-flex items-center gap-1 font-mono">
+                              <Users className="h-3 w-3" />
+                              {team.memberCount} members
+                            </span>
+                          </div>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-[#B5B5B5]">
-                        <div className="truncate max-w-[200px]">{team.college || 'Unlisted'}</div>
-                        {team.degree && <div className="text-[10px] text-[#808080]">{team.degree}</div>}
+                      <td className="py-4 px-4">
+                        <div className="text-sm font-semibold text-white">
+                          {team.college || 'Unlisted'}
+                        </div>
+                        {team.degree && (
+                          <div className="text-xs text-[#A0A0A0] font-medium mt-0.5">
+                            {team.degree}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-3 px-4 text-[#808080] font-mono text-[11px]">
-                        {team.leaderPhone && <div>{team.leaderPhone}</div>}
-                        {team.leaderEmail && <div className="text-[10px] truncate max-w-[180px]">{team.leaderEmail}</div>}
+                      <td className="py-4 px-4">
+                        {team.leaderPhone && (
+                          <div className="font-mono text-sm font-bold text-white flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                            {team.leaderPhone}
+                          </div>
+                        )}
+                        {team.leaderEmail && (
+                          <div className="text-xs text-[#A0A0A0] mt-1 truncate max-w-[220px] flex items-center gap-1.5">
+                            <Mail className="h-3 w-3 text-[#707070] shrink-0" />
+                            {team.leaderEmail}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-[#B5B5B5]">
-                        {team.paymentRef || '—'}
+                      <td className="py-4 px-4">
+                        {team.paymentRef ? (
+                          <span className="font-mono text-xs sm:text-sm font-semibold text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2.5 py-1 rounded-lg inline-block">
+                            {team.paymentRef}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#707070] italic">None</span>
+                        )}
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-4 px-4 text-center">
                         {team.isPresent ? (
-                          <Badge variant="present" className="inline-flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                          <Badge variant="present" className="inline-flex items-center gap-1.5 text-xs py-1 px-2.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                             Present (P)
                           </Badge>
                         ) : (
-                          <Badge variant="absent">Not Marked</Badge>
+                          <Badge variant="absent" className="text-xs py-1 px-2.5">
+                            Not Marked
+                          </Badge>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-center font-mono text-[#808080] text-[11px]">
+                      <td className="py-4 px-4 text-center font-mono font-bold text-xs text-[#A0A0A0]">
                         {team.rowIndex ?? '—'}
                       </td>
                     </tr>
