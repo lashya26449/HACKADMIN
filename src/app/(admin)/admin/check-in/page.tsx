@@ -26,7 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, ArrowRight, Scan, Keyboard, Download, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react';
 
 export default function CheckInPage() {
   const { user, role, getIdToken } = useAuth();
@@ -440,73 +440,29 @@ export default function CheckInPage() {
       {/* Sticky Full-Width Search & Filter Bar */}
       <div className="sticky top-0 z-30 bg-[#080808]/95 backdrop-blur-2xl py-3.5 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 border-b border-white/10 transition-all space-y-3">
         {/* Row 1: Full-width search bar extending across entire workspace */}
-        <div className="w-full flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <SearchBar
-              inputRef={searchInputRef}
-              value={search}
-              onChange={val => {
-                setSearch(val);
-                setSelectedIndex(null);
-              }}
-              onNavigateDown={() => {
-                if (filteredTeams.length > 0) {
-                  setSelectedIndex(0);
-                  document.getElementById(`team-card-${filteredTeams[0].teamId}`)?.scrollIntoView({ block: 'nearest' });
-                }
-              }}
-              onNavigateUp={() => {
-                if (filteredTeams.length > 0) {
-                  const last = filteredTeams.length - 1;
-                  setSelectedIndex(last);
-                  document.getElementById(`team-card-${filteredTeams[last].teamId}`)?.scrollIntoView({ block: 'nearest' });
-                }
-              }}
-              placeholder="Search by Team ID (e.g. LAK-001), team name, leader, college... (Press '/' to focus)"
-            />
-          </div>
-
-          {/* Quick Desk Action Buttons (Equivalent Clickable Controls for Mouse/Touch) */}
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <Button
-              variant={quickScanActive ? 'emerald' : 'illuminated'}
-              size="sm"
-              onClick={() => setQuickScanActive(prev => !prev)}
-              className={`h-11 px-3.5 text-xs transition-all duration-200 ${
-                quickScanActive
-                  ? 'glow-emerald'
-                  : 'hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-              }`}
-              title="Toggle Quick Scan Barcode Mode (Alt + Q)"
-            >
-              <Scan className="h-4 w-4 mr-1.5" />
-              <span className="hidden md:inline font-medium">Scan</span>
-              <kbd className="hidden lg:inline ml-1.5 text-[10px] font-mono text-[#808080] bg-white/[0.08] px-1.5 py-0.5 rounded border border-white/10">Alt+Q</kbd>
-            </Button>
-
-            <Button
-              variant="illuminated"
-              size="sm"
-              onClick={() => setExportOpen(true)}
-              className="h-11 px-3.5 text-xs text-[#F0F0F0] hover:border-purple-500/40 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all duration-200"
-              title="Export Registrations & Attendance (Alt + E)"
-            >
-              <Download className="h-4 w-4 mr-1.5" />
-              <span className="hidden md:inline font-medium">Export</span>
-              <kbd className="hidden lg:inline ml-1.5 text-[10px] font-mono text-[#808080] bg-white/[0.08] px-1.5 py-0.5 rounded border border-white/10">Alt+E</kbd>
-            </Button>
-
-            <Button
-              variant="illuminated"
-              size="sm"
-              onClick={() => setHelpOpen(true)}
-              className="h-11 px-3 text-xs text-[#808080] hover:text-[#F0F0F0] hover:border-white/30 transition-all duration-200"
-              title="Keyboard Shortcuts Reference (?)"
-              aria-label="Keyboard shortcuts reference"
-            >
-              <Keyboard className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="w-full">
+          <SearchBar
+            inputRef={searchInputRef}
+            value={search}
+            onChange={val => {
+              setSearch(val);
+              setSelectedIndex(null);
+            }}
+            onNavigateDown={() => {
+              if (filteredTeams.length > 0) {
+                setSelectedIndex(0);
+                document.getElementById(`team-card-${filteredTeams[0].teamId}`)?.scrollIntoView({ block: 'nearest' });
+              }
+            }}
+            onNavigateUp={() => {
+              if (filteredTeams.length > 0) {
+                const last = filteredTeams.length - 1;
+                setSelectedIndex(last);
+                document.getElementById(`team-card-${filteredTeams[last].teamId}`)?.scrollIntoView({ block: 'nearest' });
+              }
+            }}
+            placeholder="Search by Team ID (e.g. LAK-001), team name, leader, college... (Press '/' to focus)"
+          />
         </div>
 
         {/* Row 2: Attendance status filter tabs (All / Present / Not Present) and counter */}

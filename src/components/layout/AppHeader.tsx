@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Wifi, WifiOff, RefreshCw, Clock, CheckCircle2, AlertCircle, LogOut, Keyboard } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, Clock, CheckCircle2, AlertCircle, LogOut, Keyboard, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeams } from '@/contexts/TeamsContext';
@@ -64,7 +64,31 @@ export function AppHeader() {
   const [headerHelpOpen, setHeaderHelpOpen] = useState(false);
   const [headerQuickSearchOpen, setHeaderQuickSearchOpen] = useState(false);
   const [headerExportOpen, setHeaderExportOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Handle outside click & Escape key to close the user dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [dropdownOpen]);
 
   const title = Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? 'HackAdmin';
   const isCheckInPage = pathname === '/admin/check-in';
@@ -258,32 +282,66 @@ export function AppHeader() {
           <Keyboard className="h-3.5 w-3.5" />
         </Button>
 
-        {/* Real Signed-in User Info & Sign Out */}
-        <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500/25 via-slate-800 to-cyan-500/25 text-xs font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+        {/* User Email & Sign Out Dropdown Menu */}
+        <div className="relative pl-2 border-l border-white/10" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setDropdownOpen(prev => !prev)}
+            aria-expanded={dropdownOpen}
+            aria-haspopup="true"
+            className={cn(
+              "flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all duration-200 outline-none select-none cursor-pointer",
+              dropdownOpen
+                ? "bg-white/[0.12] border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] text-white"
+                : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 text-[#E0E0E0]"
+            )}
+            title="User account details & sign out"
+          >
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500/25 via-slate-800 to-cyan-500/25 text-xs font-bold text-white shadow-[0_0_10px_rgba(16,185,129,0.25)]">
               {user?.email ? user.email[0].toUpperCase() : 'A'}
             </div>
-            <div className="hidden lg:flex flex-col">
-              <span className="text-xs text-[#F0F0F0] max-w-[130px] truncate leading-tight font-medium">
-                {user?.email || 'Administrator'}
-              </span>
-              <span className="text-[10px] text-[#808080] capitalize leading-none mt-0.5">
-                {role ? role.replace('_', ' ') : 'Administrator'}
-              </span>
-            </div>
-          </div>
+            <span className="text-xs font-medium max-w-[140px] sm:max-w-[200px] md:max-w-[260px] truncate leading-tight">
+              {user?.email || 'admin@hackadmin.dev'}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-[#888888] transition-transform duration-200",
+                dropdownOpen && "rotate-180 text-white"
+              )}
+            />
+          </button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="h-8 px-2 text-xs text-[#808080] hover:text-red-400 hover:bg-red-950/30 border border-transparent hover:border-red-800/40 transition-all rounded-lg"
-            title="Sign out"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline ml-1">Sign out</span>
-          </Button>
+          {/* Floating Dropdown Menu */}
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/15 bg-[#0C0C0C]/95 backdrop-blur-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(16,185,129,0.12)] z-50 animate-in fade-in-0 zoom-in-95">
+              <div className="px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/5 mb-1">
+                <p className="text-[10px] font-mono text-[#808080] uppercase tracking-wider">Signed in as</p>
+                <p className="text-xs font-semibold text-[#F0F0F0] truncate mt-0.5" title={user?.email || 'admin@hackadmin.dev'}>
+                  {user?.email || 'admin@hackadmin.dev'}
+                </p>
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span className="text-[10px] font-medium text-emerald-300 capitalize">
+                    {role ? role.replace('_', ' ') : 'Administrator'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="h-px bg-white/10 my-1" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDropdownOpen(false);
+                  handleSignOut();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-transparent hover:border-red-800/40 rounded-lg transition-all cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sign out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
