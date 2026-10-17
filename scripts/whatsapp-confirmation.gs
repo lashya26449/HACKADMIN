@@ -284,6 +284,13 @@ function initializeExistingRow_(sheet, row) {
 
   const columns = getColumns_(sheet);
 
+  // Guard: Do not initialize empty/blank rows (must have Team Name or Timestamp)
+  const teamName = sheet.getRange(row, columns.teamName).getDisplayValue().trim();
+  const timestamp = sheet.getRange(row, 1).getDisplayValue().trim();
+  if (!teamName && !timestamp) {
+    return;
+  }
+
   const idCell = sheet.getRange(row, columns.teamId);
   const attendanceCell = sheet.getRange(row, columns.attendance);
 
@@ -339,6 +346,13 @@ function processRowForWhatsAppLink(sheet, rowNumber) {
 
     const columns = getColumns_(sheet);
     if (!columns.whatsappConfirmation) return;
+
+    // Guard: Skip empty rows
+    const teamNameVal = sheet.getRange(rowNumber, columns.teamName).getDisplayValue().trim();
+    const timestampVal = sheet.getRange(rowNumber, 1).getDisplayValue().trim();
+    if (!teamNameVal && !timestampVal) {
+      return;
+    }
 
     const teamId = sheet.getRange(rowNumber, columns.teamId).getDisplayValue().trim();
     if (!teamId) {

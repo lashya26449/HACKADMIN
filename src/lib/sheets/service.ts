@@ -428,6 +428,15 @@ export async function syncTeamsFromSheet(
       return;
     }
 
+    const tName = teamNameIdx >= 0 ? String(row[teamNameIdx] ?? '').trim() : '';
+    const lEmail = leaderEmailIdx >= 0 ? String(row[leaderEmailIdx] ?? '').trim() : '';
+    const rTime = timestampIdx >= 0 ? String(row[timestampIdx] ?? '').trim() : '';
+
+    // Ignore ghost/empty rows that have no team name, no leader email, and no timestamp
+    if (!tName && !lEmail && !rTime) {
+      return;
+    }
+
     if (!seenIds.has(rawTeamId)) seenIds.set(rawTeamId, []);
     seenIds.get(rawTeamId)!.push(rowNumber);
 
