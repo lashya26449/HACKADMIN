@@ -151,8 +151,8 @@ export default function CheckInPage() {
         sound.playSuccessChime();
 
         toast.success(
-          `Team ${teamId} Checked In! Move to CSE Seminar Hall (Go straight and take a left) 📍 Arrival mail triggered.`,
-          { duration: 6000 }
+          `Team ${teamId} Checked In! Arrival mail triggered.`,
+          { duration: 5000 }
         );
 
         // Update local state to Present
@@ -169,7 +169,7 @@ export default function CheckInPage() {
           timestamp: new Date().toISOString(),
         };
         setRecentActivity(prev => [entry, ...prev].slice(0, 30));
-        setAnnouncement(`Team ${teamId} verified and marked present. Move to CSE Seminar Hall.`);
+        setAnnouncement(`Team ${teamId} Checked In! Arrival mail triggered.`);
       } else {
         sound.playWarningTone();
         // Fallback: still mark present locally so event check-in desk is never blocked
