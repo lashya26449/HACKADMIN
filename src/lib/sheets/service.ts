@@ -173,6 +173,7 @@ export async function inspectAndMapHeaders(
   const detectedColumns: DetectedColumn[] = [];
 
   let teamIdCol = '';
+  let timestampCol = '';
   let teamNameCol = '';
   let leaderNameCol = '';
   let leaderEmailCol = '';
@@ -195,8 +196,13 @@ export async function inspectAndMapHeaders(
 
     let purpose = 'General';
 
+    // 0. Timestamp / Registration Date (Column A)
+    if (/^timestamp$|submission\s*time|time\s*stamp|^date$/.test(norm)) {
+      timestampCol = letter;
+      purpose = 'Timestamp';
+    }
     // 1. Team ID (strict: must NOT be email id or college id)
-    if (/^team\s*(id|code|identifier|no|number)$/.test(norm) || (norm.startsWith('team id') && !norm.includes('email') && !norm.includes('lead'))) {
+    else if (/^team\s*(id|code|identifier|no|number)$/.test(norm) || (norm.startsWith('team id') && !norm.includes('email') && !norm.includes('lead'))) {
       teamIdCol = letter;
       purpose = 'Team ID';
     }
@@ -303,6 +309,7 @@ export async function inspectAndMapHeaders(
       paymentScreenshotColumn: paymentScreenshotCol,
       whatsappColumn: whatsappCol,
       memberCountColumn: memberCountCol,
+      timestampColumn: timestampCol || 'A',
       headerRow,
       dataStartRow: headerRow + 1,
     },
@@ -358,6 +365,7 @@ export async function syncTeamsFromSheet(
     config.paymentScreenshotColumn,
     config.whatsappColumn,
     config.memberCountColumn,
+    config.timestampColumn,
   ].filter((col): col is string => Boolean(col));
 
   let maxColIndex = 16; // default at least Q (index 16)
@@ -398,6 +406,8 @@ export async function syncTeamsFromSheet(
   const whatsappColLetter = config.whatsappColumn;
   const whatsappIdx = whatsappColLetter ? columnLetterToIndex(whatsappColLetter) : -1;
   const memberCountIdx = config.memberCountColumn ? columnLetterToIndex(config.memberCountColumn) : -1;
+  const timestampColLetter = config.timestampColumn || 'A';
+  const timestampIdx = timestampColLetter ? columnLetterToIndex(timestampColLetter) : 0;
 
   const seenIds = new Map<string, number[]>();
   const dataRows = rows.slice(config.dataStartRow - 1);
@@ -487,6 +497,7 @@ export async function syncTeamsFromSheet(
       emailStatus: emailStatus || undefined,
       whatsappUrl: whatsappIdx >= 0 ? String(row[whatsappIdx] ?? '').trim() || undefined : undefined,
       rowIndex: rowNumber,
+      registeredAt: (timestampIdx >= 0 ? String(row[timestampIdx] ?? '').trim() : '') || undefined,
       syncedAt: new Date().toISOString(),
     });
   });

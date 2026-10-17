@@ -23,11 +23,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <TeamsProvider>
-      <div className="flex h-screen overflow-hidden bg-[#080808] text-[#F0F0F0] antialiased">
-        {!isCheckInPage && <AppSidebar />}
-        <div className="flex flex-1 flex-col overflow-hidden w-full min-w-0">
-          <AppHeader />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#080808] w-full min-w-0">
+      <div className="flex h-screen overflow-hidden bg-[#080808] text-[#F0F0F0] antialiased print:h-auto print:overflow-visible print:bg-white print:text-black">
+        {!isCheckInPage && (
+          <div className="print:hidden">
+            <AppSidebar />
+          </div>
+        )}
+        <div className="flex flex-1 flex-col overflow-hidden w-full min-w-0 print:overflow-visible print:h-auto">
+          <div className="print:hidden">
+            <AppHeader />
+          </div>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#080808] w-full min-w-0 print:p-0 print:bg-white print:overflow-visible">
             {children}
           </main>
         </div>

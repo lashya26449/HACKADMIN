@@ -116,6 +116,7 @@ export interface SheetsConfig {
   paymentScreenshotColumn?: string;
   whatsappColumn?: string;
   memberCountColumn?: string;
+  timestampColumn?: string;
   headerRow: number;
   dataStartRow: number;
   configured: boolean;

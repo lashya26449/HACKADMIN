@@ -1,38 +1,54 @@
 'use client';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CreditCard, Search, Download, Printer, ExternalLink,
-  Copy, Check, FileCheck, AlertCircle, RefreshCw,
-  Hash, School, User, Phone, Mail, CheckCircle2, XCircle,
-  Eye, Image as ImageIcon, ArrowUpDown
+  Copy, Check, AlertCircle, RefreshCw,
+  Hash, School, User, Phone, CheckCircle2,
+  Clock, Link as LinkIcon
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogDescription
-} from '@/components/ui/dialog';
 import { useTeams } from '@/contexts/TeamsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { extractDriveFileId, formatRelative } from '@/lib/utils';
 import { toast } from 'sonner';
 
 type PaymentFilter = 'all' | 'utr_submitted' | 'utr_missing' | 'has_proof' | 'present';
+type TimestampDisplayOption = 'timings' | 'timestamp_link';
+
+const SPREADSHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d/11xu3PH0OzCCYMDq6LGrdiy7ANcluOHUYlBXJYWMXDQs/edit#gid=1086772870';
+
+function formatTiming(dateStr?: string): { time: string; date: string } {
+  if (!dateStr) return { time: '—', date: '' };
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const time = d.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata',
+      });
+      const date = d.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        timeZone: 'Asia/Kolkata',
+      });
+      return { time, date };
+    }
+  } catch {
+    // Ignore fallback
+  }
+  return { time: dateStr, date: '' };
+}
 
 export default function PaymentsPage() {
-  const { teams, loading, lastSync, syncInProgress, syncNow } = useTeams();
+  const { teams, loading, syncInProgress, syncNow } = useTeams();
   const { getIdToken } = useAuth();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PaymentFilter>('all');
+  const [timestampOption, setTimestampOption] = useState<TimestampDisplayOption>('timings');
   const [copiedUtr, setCopiedUtr] = useState<string | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<{
-    teamId: string;
-    teamName: string;
-    utr?: string;
-    url: string;
-  } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [printDate, setPrintDate] = useState('');
 
@@ -71,7 +87,8 @@ export default function PaymentsPage() {
         const matchesLead = (t.leaderName || '').toLowerCase().includes(q);
         const matchesPhone = (t.leaderPhone || '').toLowerCase().includes(q);
         const matchesCollege = (t.college || '').toLowerCase().includes(q);
-        if (!matchesId && !matchesName && !matchesUtr && !matchesLead && !matchesPhone && !matchesCollege) {
+        const matchesTimestamp = (t.registeredAt || '').toLowerCase().includes(q);
+        if (!matchesId && !matchesName && !matchesUtr && !matchesLead && !matchesPhone && !matchesCollege && !matchesTimestamp) {
           return false;
         }
       }
@@ -104,8 +121,8 @@ export default function PaymentsPage() {
         'College',
         'UTR Number',
         'Payment Proof URL',
+        'Payment Timestamp',
         'Payment Status',
-        'Attendance',
       ];
 
       const rows = filteredTeams.map((t, idx) => [
@@ -118,8 +135,8 @@ export default function PaymentsPage() {
         t.college || '',
         t.paymentRef || 'N/A',
         t.paymentProofUrl || 'N/A',
+        t.registeredAt || 'N/A',
         t.paymentStatus || (t.paymentRef ? 'Submitted' : 'Pending'),
-        t.isPresent ? 'Present (P)' : 'Absent',
       ]);
 
       const csvContent = [headers, ...rows]
@@ -148,7 +165,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6 w-full max-w-full pb-20">
-      {/* PRINT-ONLY HEADER (Hidden on screen, visible during window.print()) */}
+      {/* PRINT-ONLY HEADER (Hidden on screen, strictly visible during window.print()) */}
       <div className="hidden print:block mb-6 border-b-2 border-black pb-4 text-black">
         <div className="flex justify-between items-start">
           <div>
@@ -175,7 +192,7 @@ export default function PaymentsPage() {
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-[#F0F0F0]">Payments & UTR Verification</h1>
                 <p className="text-xs text-[#808080]">
-                  Track transaction references, inspect payment screenshots, and export printable ledgers.
+                  Track transaction references, open proof screenshots directly, and export printable ledgers.
                 </p>
               </div>
             </div>
@@ -260,7 +277,7 @@ export default function PaymentsPage() {
                   </div>
                 </div>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                  <ImageIcon className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4" />
                 </div>
               </div>
             </CardContent>
@@ -281,24 +298,58 @@ export default function PaymentsPage() {
           </Card>
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl border border-white/10 bg-[#101010]/90 backdrop-blur-xl">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#808080]" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by UTR number, Team ID, Team Name, Leader Name, or Phone..."
-              className="pl-9 h-9 border-white/10 bg-white/5 text-xs text-[#F0F0F0] placeholder:text-[#606060] focus-visible:ring-emerald-500/50"
-            />
+        {/* Search & Filter Bar + Timings/Timestamp Two Options */}
+        <div className="flex flex-col gap-3 p-3 rounded-xl border border-white/10 bg-[#101010]/90 backdrop-blur-xl">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#808080]" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by UTR number, Team ID, Team Name, Leader Name, Phone, or Timestamp..."
+                className="pl-9 h-9 border-white/10 bg-white/5 text-xs text-[#F0F0F0] placeholder:text-[#606060] focus-visible:ring-emerald-500/50"
+              />
+            </div>
+
+            {/* Timings vs Timestamp Link Options */}
+            <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-lg border border-white/10 shrink-0">
+              <span className="text-[10px] text-[#808080] px-1 font-medium uppercase tracking-wider">Display:</span>
+              <button
+                type="button"
+                onClick={() => setTimestampOption('timings')}
+                className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                  timestampOption === 'timings'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-[#808080] hover:text-[#F0F0F0]'
+                }`}
+                title="Option 1: Show Clock Timings (Time / Date)"
+              >
+                <Clock className="h-3 w-3" />
+                <span>Clock Timings</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTimestampOption('timestamp_link')}
+                className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                  timestampOption === 'timestamp_link'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-[#808080] hover:text-[#F0F0F0]'
+                }`}
+                title="Option 2: Show Timestamp Link to Spreadsheet row"
+              >
+                <LinkIcon className="h-3 w-3" />
+                <span>Timestamp Link</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 border-t border-white/5 pt-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setFilter('all')}
-              className={`h-8 px-2.5 text-xs rounded-lg ${filter === 'all' ? 'bg-white/15 text-white font-medium' : 'text-[#808080] hover:text-white'}`}
+              className={`h-7 px-2.5 text-xs rounded-lg ${filter === 'all' ? 'bg-white/15 text-white font-medium' : 'text-[#808080] hover:text-white'}`}
             >
               All ({teams.length})
             </Button>
@@ -306,7 +357,7 @@ export default function PaymentsPage() {
               variant="ghost"
               size="sm"
               onClick={() => setFilter('utr_submitted')}
-              className={`h-8 px-2.5 text-xs rounded-lg ${filter === 'utr_submitted' ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'text-[#808080] hover:text-white'}`}
+              className={`h-7 px-2.5 text-xs rounded-lg ${filter === 'utr_submitted' ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'text-[#808080] hover:text-white'}`}
             >
               Has UTR ({stats.withUtr})
             </Button>
@@ -314,7 +365,7 @@ export default function PaymentsPage() {
               variant="ghost"
               size="sm"
               onClick={() => setFilter('utr_missing')}
-              className={`h-8 px-2.5 text-xs rounded-lg ${filter === 'utr_missing' ? 'bg-red-500/20 text-red-400 font-medium' : 'text-[#808080] hover:text-white'}`}
+              className={`h-7 px-2.5 text-xs rounded-lg ${filter === 'utr_missing' ? 'bg-red-500/20 text-red-400 font-medium' : 'text-[#808080] hover:text-white'}`}
             >
               UTR Missing ({stats.total - stats.withUtr})
             </Button>
@@ -322,7 +373,7 @@ export default function PaymentsPage() {
               variant="ghost"
               size="sm"
               onClick={() => setFilter('has_proof')}
-              className={`h-8 px-2.5 text-xs rounded-lg ${filter === 'has_proof' ? 'bg-purple-500/20 text-purple-400 font-medium' : 'text-[#808080] hover:text-white'}`}
+              className={`h-7 px-2.5 text-xs rounded-lg ${filter === 'has_proof' ? 'bg-purple-500/20 text-purple-400 font-medium' : 'text-[#808080] hover:text-white'}`}
             >
               Screenshots ({stats.withProof})
             </Button>
@@ -330,7 +381,7 @@ export default function PaymentsPage() {
               variant="ghost"
               size="sm"
               onClick={() => setFilter('present')}
-              className={`h-8 px-2.5 text-xs rounded-lg ${filter === 'present' ? 'bg-blue-500/20 text-blue-400 font-medium' : 'text-[#808080] hover:text-white'}`}
+              className={`h-7 px-2.5 text-xs rounded-lg ${filter === 'present' ? 'bg-blue-500/20 text-blue-400 font-medium' : 'text-[#808080] hover:text-white'}`}
             >
               Present ({stats.present})
             </Button>
@@ -338,7 +389,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* SCREEN TABLE / CARDS VIEW */}
+      {/* SCREEN TABLE VIEW */}
       <div className="print:hidden space-y-3">
         {loading && teams.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -359,17 +410,22 @@ export default function PaymentsPage() {
                   <tr className="border-b border-white/10 bg-white/5 text-[#808080] font-medium">
                     <th className="py-3 px-3.5 w-12 text-center">#</th>
                     <th className="py-3 px-3.5 w-28">Team ID</th>
-                    <th className="py-3 px-4 min-w-[180px]">Team & College</th>
-                    <th className="py-3 px-4 min-w-[170px]">Team Lead</th>
-                    <th className="py-3 px-4 min-w-[200px]">UTR / Transaction Ref</th>
+                    <th className="py-3 px-4 min-w-[170px]">Team & College</th>
+                    <th className="py-3 px-4 min-w-[160px]">Team Lead</th>
+                    <th className="py-3 px-4 min-w-[180px]">UTR / Transaction Ref</th>
+                    <th className="py-3 px-4 min-w-[180px]">
+                      {timestampOption === 'timings' ? 'Payment Timings' : 'Timestamp Link'}
+                    </th>
                     <th className="py-3 px-4 min-w-[150px]">Payment Proof</th>
-                    <th className="py-3 px-3.5 text-center w-28">Attendance</th>
+                    <th className="py-3 px-3.5 text-center w-24">Attendance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredTeams.map((team, idx) => {
                     const hasUtr = Boolean(team.paymentRef && team.paymentRef.trim().length > 0);
                     const hasProof = Boolean(team.paymentProofUrl && team.paymentProofUrl.trim().length > 0);
+                    const timing = formatTiming(team.registeredAt);
+                    const sheetRowUrl = `${SPREADSHEET_BASE_URL}&range=A${team.rowIndex || idx + 2}`;
 
                     return (
                       <tr key={team.teamId} className="hover:bg-white/[0.03] transition-colors group">
@@ -445,35 +501,50 @@ export default function PaymentsPage() {
                           )}
                         </td>
 
-                        {/* Payment Proof / Photo */}
+                        {/* Timings & Timestamp Link (Option 1 vs Option 2) */}
+                        <td className="py-3.5 px-4">
+                          {timestampOption === 'timings' ? (
+                            // Option 1: Clock Timings View
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5 text-xs text-[#E0E0E0] font-mono">
+                                <Clock className="h-3 w-3 text-emerald-400 shrink-0" />
+                                <span className="font-semibold">{timing.time}</span>
+                              </div>
+                              {timing.date && (
+                                <span className="text-[10px] text-[#808080] ml-4">{timing.date}</span>
+                              )}
+                            </div>
+                          ) : (
+                            // Option 2: Direct Timestamp Link View
+                            <a
+                              href={sheetRowUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-mono rounded border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
+                              title="Open row in Google Spreadsheet"
+                            >
+                              <LinkIcon className="h-3 w-3 shrink-0" />
+                              <span className="truncate max-w-[130px]">
+                                {team.registeredAt || `Row ${team.rowIndex || idx + 2}`}
+                              </span>
+                              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                            </a>
+                          )}
+                        </td>
+
+                        {/* Payment Proof / Photo: Directly opens link everywhere with NO preview popups */}
                         <td className="py-3.5 px-4">
                           {hasProof ? (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedPhoto({
-                                  teamId: team.teamId,
-                                  teamName: team.teamName,
-                                  utr: team.paymentRef,
-                                  url: team.paymentProofUrl!,
-                                })}
-                                className="h-7 px-2.5 text-[11px] border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 gap-1.5 rounded-md font-medium"
-                              >
-                                <Eye className="h-3 w-3" />
-                                View Photo
-                              </Button>
-
-                              <a
-                                href={team.paymentProofUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#808080] hover:text-white p-1"
-                                title="Open in Google Drive"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            </div>
+                            <a
+                              href={team.paymentProofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[11px] border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 rounded-md font-medium transition-colors"
+                              title="Open payment proof screenshot in new tab (direct link, no popup)"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              <span>Open Proof</span>
+                            </a>
                           ) : (
                             <span className="text-[11px] text-[#606060] italic">
                               No screenshot
@@ -504,20 +575,22 @@ export default function PaymentsPage() {
         )}
       </div>
 
-      {/* PRINT-OPTIMIZED TABLE (Strictly styled for printer / PDF output) */}
+      {/* PRINT-OPTIMIZED TABLE (Strictly styled for printer / PDF output)
+          REQUIREMENTS:
+          - No attendance column
+          - No sign/status column
+          - Strictly: Team ID, Lead Name, Lead Number, UTR Number, and Payment Timestamp
+      */}
       <div className="hidden print:block text-black">
         <table className="w-full text-left text-[11px] border-collapse border border-gray-400">
           <thead>
             <tr className="bg-gray-100 text-black font-bold border-b border-gray-400">
               <th className="py-2 px-2 border border-gray-400 text-center w-8">#</th>
-              <th className="py-2 px-2 border border-gray-400 w-24">Team ID</th>
-              <th className="py-2 px-2 border border-gray-400">Team Name</th>
-              <th className="py-2 px-2 border border-gray-400">Leader Name</th>
-              <th className="py-2 px-2 border border-gray-400">Phone</th>
-              <th className="py-2 px-2 border border-gray-400">College</th>
+              <th className="py-2 px-2 border border-gray-400 w-28">Team ID</th>
+              <th className="py-2 px-2 border border-gray-400">Lead Name</th>
+              <th className="py-2 px-2 border border-gray-400">Lead Number</th>
               <th className="py-2 px-2 border border-gray-400 font-mono">UTR Number</th>
-              <th className="py-2 px-2 border border-gray-400 text-center w-16">Attendance</th>
-              <th className="py-2 px-2 border border-gray-400 text-center w-24">Sign / Status</th>
+              <th className="py-2 px-2 border border-gray-400">Payment Timestamp</th>
             </tr>
           </thead>
           <tbody>
@@ -525,18 +598,13 @@ export default function PaymentsPage() {
               <tr key={team.teamId} className="border-b border-gray-300 page-break-inside-avoid">
                 <td className="py-1.5 px-2 border border-gray-300 text-center font-mono">{idx + 1}</td>
                 <td className="py-1.5 px-2 border border-gray-300 font-mono font-bold">{team.teamId}</td>
-                <td className="py-1.5 px-2 border border-gray-300 font-semibold">{team.teamName}</td>
-                <td className="py-1.5 px-2 border border-gray-300">{team.leaderName || '—'}</td>
+                <td className="py-1.5 px-2 border border-gray-300 font-medium">{team.leaderName || '—'}</td>
                 <td className="py-1.5 px-2 border border-gray-300 font-mono">{team.leaderPhone || '—'}</td>
-                <td className="py-1.5 px-2 border border-gray-300">{team.college || '—'}</td>
                 <td className="py-1.5 px-2 border border-gray-300 font-mono font-semibold">
                   {team.paymentRef || 'MISSING'}
                 </td>
-                <td className="py-1.5 px-2 border border-gray-300 text-center font-bold">
-                  {team.isPresent ? 'P' : '—'}
-                </td>
-                <td className="py-1.5 px-2 border border-gray-300 text-center">
-                  <span className="text-gray-400 text-[9px]">Verified [ &nbsp; ]</span>
+                <td className="py-1.5 px-2 border border-gray-300 font-mono text-xs">
+                  {team.registeredAt || '—'}
                 </td>
               </tr>
             ))}
@@ -553,71 +621,6 @@ export default function PaymentsPage() {
           </div>
         </div>
       </div>
-
-      {/* SCREENSHOT PREVIEW MODAL */}
-      <Dialog open={Boolean(selectedPhoto)} onOpenChange={open => !open && setSelectedPhoto(null)}>
-        <DialogContent className="max-w-3xl border-white/10 bg-[#121212] text-[#F0F0F0] p-6 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-white flex items-center justify-between">
-              <span>Payment Screenshot — {selectedPhoto?.teamId}</span>
-              {selectedPhoto?.utr && (
-                <span className="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
-                  UTR: {selectedPhoto.utr}
-                </span>
-              )}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#808080]">
-              {selectedPhoto?.teamName}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedPhoto && (
-            <div className="space-y-4 mt-2">
-              <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/60 max-h-[65vh] flex items-center justify-center p-2">
-                {/* Check if drive link can be rendered through direct image or preview iframe */}
-                {selectedPhoto.url.includes('drive.google.com') ? (
-                  <iframe
-                    src={selectedPhoto.url.replace('/view', '/preview').replace('/edit', '/preview')}
-                    className="w-full h-[55vh] border-0 rounded-lg"
-                    title={`Payment proof for ${selectedPhoto.teamId}`}
-                    allow="autoplay"
-                  />
-                ) : (
-                  <img
-                    src={selectedPhoto.url}
-                    alt={`Payment proof for ${selectedPhoto.teamId}`}
-                    className="max-h-[55vh] w-auto object-contain rounded-lg"
-                  />
-                )}
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectedPhoto.utr && copyToClipboard(selectedPhoto.utr, 'UTR')}
-                  disabled={!selectedPhoto.utr}
-                  className="h-8 border-white/10 bg-white/5 hover:bg-white/10 text-xs text-[#F0F0F0] gap-1.5"
-                >
-                  <Copy className="h-3 w-3" />
-                  <span>Copy UTR</span>
-                </Button>
-
-                <Button
-                  asChild
-                  size="sm"
-                  className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5"
-                >
-                  <a href={selectedPhoto.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3" />
-                    <span>Open in Google Drive</span>
-                  </a>
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

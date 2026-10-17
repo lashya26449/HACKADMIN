@@ -100,3 +100,17 @@ body {
 .slide-out-to-top-\[48\%\] { animation-name: slide-in-from-top; animation-direction: reverse; }
 .slide-in-from-left-1\/2 { animation: none; }
 .slide-out-to-left-1\/2 { animation: none; }
+
+@media print {
+  @page {
+    margin: 8mm;
+    size: auto;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, aside, nav, .print\:hidden {
+    display: none !important;
+  }
+}

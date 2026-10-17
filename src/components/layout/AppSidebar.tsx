@@ -141,13 +141,13 @@ export function AppSidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 shrink-0 flex-col">
+      <aside className="print:hidden hidden md:flex w-56 shrink-0 flex-col">
         <SidebarContent />
       </aside>
 
       {/* Mobile trigger */}
       <button
-        className="md:hidden fixed top-3 left-3 z-40 flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-[#101010] text-[#F0F0F0] shadow-lg cursor-pointer"
+        className="print:hidden md:hidden fixed top-3 left-3 z-40 flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-[#101010] text-[#F0F0F0] shadow-lg cursor-pointer"
         onClick={() => setMobileOpen(true)}
         aria-label="Open navigation"
       >
@@ -158,10 +158,10 @@ export function AppSidebar() {
       {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden"
+            className="print:hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-60 bg-[#101010] shadow-2xl md:hidden">
+          <aside className="print:hidden fixed inset-y-0 left-0 z-50 w-60 bg-[#101010] shadow-2xl md:hidden">
             <button
               className="absolute top-3.5 right-3.5 flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-[#808080] hover:text-[#F0F0F0] cursor-pointer"
               onClick={() => setMobileOpen(false)}

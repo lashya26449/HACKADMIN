@@ -109,7 +109,7 @@ export function AppHeader() {
   ], !isCheckInPage);
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#080808]/90 px-4 md:px-6 backdrop-blur-xl z-20">
+    <header className="print:hidden flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#080808]/90 px-4 md:px-6 backdrop-blur-xl z-20">
       {/* Mobile spacer for menu hamburger when sidebar is active */}
       {!isCheckInPage && <div className="w-8 md:hidden" />}
 
