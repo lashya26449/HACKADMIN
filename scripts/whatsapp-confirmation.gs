@@ -32,7 +32,6 @@ const CONFIG = {
   prefix: "LAK-",
   whatsappLink: "https://chat.whatsapp.com/DbQG3y0N9PQ4orwt8ftxcq", // Announcement group for emails
   teamNameHeader: "Team Name :",
-  leaderNameHeader: "Team Lead Name :",
   emailHeader: "Team Lead Email ID :",
   phoneHeader: "Team Lead PhoneNo:",
   teamIdHeader: "Team ID",
@@ -40,18 +39,32 @@ const CONFIG = {
   emailStatusHeader: "Email Status",
   whatsappConfirmationHeader: "WhatsApp Confirmation",
   attendanceEmailHeader: "Attendance Email Status",
+  whatsappLinkLabel: "Send WhatsApp",
+  organizerEmail: "hemanth109c@gmail.com",
   venueHall: "CSE Seminar Hall",
-  venueDirections: "Go straight and take a left",
-  whatsappLinkLabel: "Send WhatsApp"
+  venueDirections: "Go straight and take a left"
 };
 
 /**
+ * Always target the actual Google Form response worksheet, not whichever tab
+ * happens to be first in the spreadsheet.
+ */
+function getRegistrationSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Form Responses 1");
+  if (!sheet) {
+    throw new Error('Could not find the worksheet "Form Responses 1". Check the exact tab name.');
+  }
+  return sheet;
+}
+
+/**
  * Run this function ONCE to set up the sheet.
- * It creates the required columns (O, P, Q, R, S) and installs triggers.
+ * It verifies the required columns and installs the managed triggers. It also prepares existing rows.
  */
 function setupRegistrationSystem() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheets()[0];
+  const sheet = getRegistrationSheet_();
 
   let headers = sheet
     .getRange(1, 1, 1, sheet.getLastColumn())
@@ -74,29 +87,38 @@ function setupRegistrationSystem() {
 
   const existingTriggers = ScriptApp.getProjectTriggers();
 
+  const managedHandlers = [
+    "onFormSubmit",
+    "onSpreadsheetChange",
+    "onSheetEdit",
+    "checkAndSendAttendanceEmails"
+  ];
+
   existingTriggers.forEach(trigger => {
-    const fn = trigger.getHandlerFunction();
-    if (fn === "onFormSubmit" || fn === "onSpreadsheetChange" || fn === "onSheetEdit") {
+    if (managedHandlers.includes(trigger.getHandlerFunction())) {
       ScriptApp.deleteTrigger(trigger);
     }
   });
 
-  // 1. Google Form submit trigger
   ScriptApp.newTrigger("onFormSubmit")
     .forSpreadsheet(ss)
     .onFormSubmit()
     .create();
 
-  // 2. Trigger on spreadsheet change (fires on API / external writes to Column P)
   ScriptApp.newTrigger("onSpreadsheetChange")
     .forSpreadsheet(ss)
     .onChange()
     .create();
 
-  // 3. Trigger on direct UI edit
   ScriptApp.newTrigger("onSheetEdit")
     .forSpreadsheet(ss)
     .onEdit()
+    .create();
+
+  // Reliable fallback for attendance changes made by HackAdmin/API.
+  ScriptApp.newTrigger("checkAndSendAttendanceEmails")
+    .timeBased()
+    .everyMinutes(5)
     .create();
 
   // Prepare existing rows without resending emails.
@@ -107,7 +129,7 @@ function setupRegistrationSystem() {
 
   SpreadsheetApp.flush();
 
-  Logger.log("Registration system, WhatsApp confirmation, and attendance email triggers installed successfully.");
+  Logger.log("Registration, participant email, organizer alerts, WhatsApp links, and attendance email triggers installed successfully.");
 }
 
 /**
@@ -134,10 +156,18 @@ function onFormSubmit(e) {
     // 1. Assign Team ID in Column O and default attendance in Column P
     initializeExistingRow_(sheet, row);
 
-    // 2. Generate WhatsApp Confirmation Link in Column R (immediately after Team ID is assigned)
+    // 2. Generate WhatsApp Confirmation Link in Column R.
     processRowForWhatsAppLink(sheet, row);
 
-    // 3. Process Confirmation Email in Column Q
+    // 3. Notify the organizer about this registration. This only reads A:O.
+    // A notification failure must not stop the participant confirmation email.
+    try {
+      sendOrganizerRegistrationAlert_(sheet, row);
+    } catch (alertError) {
+      console.error("Organizer registration alert failed for row " + row, alertError);
+    }
+
+    // 4. Process participant confirmation email in Column Q.
     const columns = getColumns_(sheet);
 
     const teamId = sheet
@@ -251,9 +281,9 @@ function getColumns_(sheet) {
   const emailStatus = find(CONFIG.emailStatusHeader);
   const email = find(CONFIG.emailHeader);
   const teamName = find(CONFIG.teamNameHeader);
-  const leadName = find(CONFIG.leaderNameHeader) || find("Team Lead Name") || find("Lead Name") || 3;
   const phone = find(CONFIG.phoneHeader) || find("Team Lead PhoneNo") || find("Phone") || 8;
   const whatsappConfirmation = find(CONFIG.whatsappConfirmationHeader) || 18;
+  const leadName = find("Team Lead Name :") || find("Team Lead Name") || 3;
   const attendanceEmail = find(CONFIG.attendanceEmailHeader) || 19;
 
   if (!teamId || !attendance || !emailStatus || !email || !teamName) {
@@ -278,6 +308,7 @@ function getColumns_(sheet) {
 /**
  * Assigns an ID and default attendance status if missing.
  * Existing IDs and attendance values are preserved.
+ * Skips empty/blank rows.
  */
 function initializeExistingRow_(sheet, row) {
   if (row < 2) return;
@@ -371,7 +402,7 @@ function processRowForWhatsAppLink(sheet, rowNumber) {
     }
 
     const teamName = sheet.getRange(rowNumber, columns.teamName).getDisplayValue().trim() || "Participant";
-    const rawPhone = sheet.getRange(rowNumber, columns.phone).getDisplayValue().trim();
+    const rawPhone = sheet.getRange(rowNumber, 8).getDisplayValue().trim(); // Column H is Team Lead PhoneNo
     const targetCell = sheet.getRange(rowNumber, columns.whatsappConfirmation);
 
     const normalizedPhone = normalizePhoneNumber(rawPhone);
@@ -474,8 +505,7 @@ function buildHyperlinkFormula(url, label) {
  * for all existing registrations without resending emails or altering Team IDs.
  */
 function generateMissingWhatsAppLinks() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheets()[0];
+  const sheet = getRegistrationSheet_();
 
   ensureColumns_(sheet);
 
@@ -497,24 +527,62 @@ function generateMissingWhatsAppLinks() {
   Logger.log("Backfill complete. Processed " + count + " rows.");
 }
 
-/**
- * ==============================================================================
- * ATTENDANCE CONFIRMATION & DIRECTIONS EMAIL SYSTEM (Column S)
- * Venue: CSE Seminar Hall
- * Directions: Go straight and take a left
- * ==============================================================================
- */
 
 /**
- * Automatically fired when HackAdmin API or an external tool edits the spreadsheet
- * (e.g. marking Column P as 'P' or 'Present').
+ * Sends the organizer a registration alert containing the submitted details.
+ * Reads columns A:O only; does not modify Team ID (O), Attendance (P),
+ * or participant Email Status (Q).
  */
-function onSpreadsheetChange(e) {
-  checkAndSendAttendanceEmails();
+function sendOrganizerRegistrationAlert_(sheet, rowNumber) {
+  if (rowNumber < 2) return;
+
+  const ss = sheet.getParent();
+  const key = "LAKSHYA_ORGANIZER_ALERT_" + ss.getId() + "_" +
+    sheet.getSheetId() + "_" + rowNumber;
+  const props = PropertiesService.getScriptProperties();
+
+  if (props.getProperty(key) === "SENT") return;
+
+  const values = sheet.getRange(rowNumber, 1, 1, 15).getDisplayValues()[0];
+  const headers = sheet.getRange(1, 1, 1, 15).getDisplayValues()[0];
+  const teamId = String(values[14] || "").trim();
+
+  if (!teamId) {
+    throw new Error("Cannot send organizer alert: Team ID is empty in column O.");
+  }
+
+  const lines = [
+    "A new LAKSHYA 2026 registration has been received.",
+    "",
+    "Team ID: " + teamId,
+    "",
+    "REGISTRATION DETAILS"
+  ];
+
+  for (let i = 0; i < 14; i++) {
+    const header = String(headers[i] || ("Column " + (i + 1))).trim();
+    const value = String(values[i] || "").trim();
+    lines.push(header + ": " + (value || "Not provided"));
+  }
+
+  lines.push("", "Team ID: " + teamId);
+  lines.push("", "This is an automated notification from the LAKSHYA 2026 registration system.");
+
+  MailApp.sendEmail({
+    to: CONFIG.organizerEmail,
+    subject: "New LAKSHYA 2026 Registration | " + teamId,
+    body: lines.join("\n"),
+    name: "LAKSHYA 2026 Registration System"
+  });
+
+  // Save only after MailApp accepts the email, preventing normal duplicate alerts.
+  props.setProperty(key, "SENT");
+  Logger.log("Organizer registration alert sent for " + teamId + " to " + CONFIG.organizerEmail);
 }
 
 /**
- * Automatically fired when an organizer edits cells directly in the spreadsheet UI.
+ * Runs for direct spreadsheet edits. Attendance emails are sent only when
+ * the Attendance column is changed to P or Present.
  */
 function onSheetEdit(e) {
   if (!e || !e.range) return;
@@ -523,118 +591,86 @@ function onSheetEdit(e) {
   if (row < 2) return;
 
   const columns = getColumns_(sheet);
-  const col = e.range.getColumn();
-
-  // If Attendance column was edited
-  if (col === columns.attendance) {
-    processAttendanceEmail(sheet, row);
+  if (e.range.getColumn() === columns.attendance) {
+    processAttendanceEmail_(sheet, row);
   }
 }
 
 /**
- * Triggers arrival directions email to the Team Lead when attendance is marked as Present.
- * Venue: CSE Seminar Hall
- * Directions: Go straight and take a left
- *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
- * @param {number} rowNumber - 1-based row index
+ * Spreadsheet change trigger. The scheduled five-minute scan below is the
+ * reliable fallback for values written through the HackAdmin/API integration.
  */
-function processAttendanceEmail(sheet, rowNumber) {
+function onSpreadsheetChange(e) {
+  checkAndSendAttendanceEmails();
+}
+
+/**
+ * Sends attendance confirmation and venue directions when column P is P
+ * or PRESENT. Status is written to column S only after the email succeeds.
+ */
+function processAttendanceEmail_(sheet, rowNumber) {
   if (rowNumber < 2) return;
 
   const lock = LockService.getScriptLock();
+  let lockAcquired = false;
+
   try {
     lock.waitLock(15000);
-  } catch (e) {
-    Logger.log("Lock acquisition timed out for row " + rowNumber);
-  }
+    lockAcquired = true;
 
-  try {
     const columns = getColumns_(sheet);
-    if (!columns.attendanceEmail) return;
+    const attendance = String(
+      sheet.getRange(rowNumber, columns.attendance).getDisplayValue() || ""
+    ).trim().toUpperCase();
 
-    const attendanceCell = sheet.getRange(rowNumber, columns.attendance);
-    const attendanceValue = attendanceCell.getDisplayValue().trim().toUpperCase();
+    if (attendance !== "P" && attendance !== "PRESENT") return;
 
-    // Only trigger if attendance is marked as Present ('P' or 'PRESENT')
-    if (attendanceValue !== "P" && attendanceValue !== "PRESENT") {
-      return;
-    }
+    const statusCell = sheet.getRange(rowNumber, columns.attendanceEmail);
+    if (String(statusCell.getDisplayValue() || "").trim().toUpperCase() === "SENT") return;
 
-    const emailStatusCell = sheet.getRange(rowNumber, columns.attendanceEmail);
-    const existingStatus = emailStatusCell.getDisplayValue().trim().toUpperCase();
-
-    // Idempotent: Never resend if already sent
-    if (existingStatus === "SENT") {
-      return;
-    }
-
-    const email = sheet.getRange(rowNumber, columns.email).getDisplayValue().trim();
-    const teamId = sheet.getRange(rowNumber, columns.teamId).getDisplayValue().trim();
-    const teamName = sheet.getRange(rowNumber, columns.teamName).getDisplayValue().trim() || "Participant";
-    const leadName = columns.leadName ? sheet.getRange(rowNumber, columns.leadName).getDisplayValue().trim() : "Team Leader";
+    const email = String(sheet.getRange(rowNumber, columns.email).getDisplayValue() || "").trim();
+    const teamId = String(sheet.getRange(rowNumber, columns.teamId).getDisplayValue() || "").trim();
+    const teamName = String(sheet.getRange(rowNumber, columns.teamName).getDisplayValue() || "").trim() || "Participant";
+    const leadName = String(sheet.getRange(rowNumber, columns.leadName).getDisplayValue() || "").trim() || "Team Lead";
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      emailStatusCell.setValue("INVALID EMAIL");
+      statusCell.setValue("INVALID EMAIL");
       return;
     }
 
     if (MailApp.getRemainingDailyQuota() < 1) {
-      emailStatusCell.setValue("PENDING - EMAIL QUOTA");
+      statusCell.setValue("PENDING - EMAIL QUOTA");
       return;
     }
 
-    const subject = "LAKSHYA 2026 | Attendance Confirmed — Move to " + CONFIG.venueHall;
-
+    const subject = "LAKSHYA 2026 | Attendance Confirmed — " + CONFIG.venueHall;
     const body =
-      "Hello " + teamName + "!\n\n" +
+      "Hello " + teamName + " team,\n\n" +
       "Your attendance for LAKSHYA 2026 has been marked as PRESENT.\n\n" +
-      "VENUE & ARRIVAL DIRECTIONS:\n" +
-      "📍 Destination: " + CONFIG.venueHall + "\n" +
-      "🚶 Directions: " + CONFIG.venueDirections + "\n\n" +
-      "TEAM DETAILS:\n" +
-      "• Team ID: " + teamId + "\n" +
-      "• Team Name: " + teamName + "\n" +
-      "• Team Lead: " + (leadName || "N/A") + "\n\n" +
-      "Please proceed immediately to the " + CONFIG.venueHall + " and take your designated seats.\n" +
-      "If you need any guidance or have luggage, please approach our organizers at the help desk.\n\n" +
-      "Best wishes for the hackathon!\n\n" +
-      "Warm regards,\n" +
-      "Team LAKSHYA 2026\n" +
-      "SJBIT, Bengaluru";
+      "VENUE: " + CONFIG.venueHall + "\n" +
+      "DIRECTIONS: " + CONFIG.venueDirections + "\n\n" +
+      "TEAM DETAILS\n" +
+      "Team ID: " + teamId + "\n" +
+      "Team Name: " + teamName + "\n" +
+      "Team Lead: " + leadName + "\n\n" +
+      "Please proceed to the venue. If you need help, approach the event organizers.\n\n" +
+      "Regards,\nTeam LAKSHYA 2026\nSJBIT, Bengaluru";
 
     const htmlBody =
-      "<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #0b0f19; color: #f1f5f9; border-radius: 12px; border: 1px solid #1e293b;\">" +
-        "<div style=\"border-bottom: 2px solid #10b981; padding-bottom: 16px; margin-bottom: 20px;\">" +
-          "<h1 style=\"color: #ffffff; font-size: 22px; margin: 0 0 4px 0;\">LAKSHYA 2026</h1>" +
-          "<p style=\"color: #10b981; font-size: 14px; font-weight: 600; margin: 0;\">✓ ATTENDANCE CONFIRMED — PRESENT</p>" +
-        "</div>" +
-
-        "<p style=\"font-size: 15px; color: #cbd5e1; line-height: 1.6;\">Hello <strong>" + teamName + "</strong>,</p>" +
-        "<p style=\"font-size: 15px; color: #cbd5e1; line-height: 1.6;\">Your check-in has been successfully verified and your attendance is officially recorded.</p>" +
-
-        "<div style=\"background-color: #1e1b4b; border-left: 4px solid #8b5cf6; padding: 16px; border-radius: 8px; margin: 20px 0;\">" +
-          "<h2 style=\"color: #c4b5fd; font-size: 16px; margin: 0 0 8px 0;\">📍 VENUE ARRIVAL DIRECTIONS</h2>" +
-          "<p style=\"margin: 4px 0; color: #ffffff; font-size: 15px;\"><strong>Destination:</strong> " + CONFIG.venueHall + "</p>" +
-          "<p style=\"margin: 4px 0; color: #a78bfa; font-size: 16px; font-weight: bold;\">🚶 Directions: " + CONFIG.venueDirections + "</p>" +
-        "</div>" +
-
-        "<div style=\"background-color: #111827; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #1f2937;\">" +
-          "<h3 style=\"color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0;\">Team Credentials</h3>" +
-          "<table style=\"width: 100%; font-size: 14px;\">" +
-            "<tr><td style=\"color: #64748b; padding: 4px 0;\">Team ID:</td><td style=\"color: #10b981; font-family: monospace; font-weight: bold;\">" + teamId + "</td></tr>" +
-            "<tr><td style=\"color: #64748b; padding: 4px 0;\">Team Name:</td><td style=\"color: #f1f5f9;\">" + teamName + "</td></tr>" +
-            "<tr><td style=\"color: #64748b; padding: 4px 0;\">Team Lead:</td><td style=\"color: #f1f5f9;\">" + leadName + "</td></tr>" +
-          "</table>" +
-        "</div>" +
-
-        "<p style=\"font-size: 14px; color: #94a3b8; line-height: 1.6;\">Please proceed immediately to the <strong>" + CONFIG.venueHall + "</strong> and take your seats. If you have any questions, approach any student volunteer wearing a LAKSHYA organizer badge.</p>" +
-
-        "<div style=\"border-top: 1px solid #1e293b; padding-top: 16px; margin-top: 24px; font-size: 12px; color: #64748b;\">" +
-          "<p style=\"margin: 0;\">Best wishes for the hackathon!</p>" +
-          "<p style=\"margin: 4px 0 0 0; color: #94a3b8;\"><strong>Team LAKSHYA 2026</strong> &middot; SJBIT, Bengaluru</p>" +
-        "</div>" +
-      "</div>";
+      '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;background:#0b0f19;color:#f1f5f9;border-radius:12px;">' +
+      '<h1 style="margin-top:0;color:#fff;">LAKSHYA 2026</h1>' +
+      '<p style="color:#34d399;font-weight:bold;">✓ ATTENDANCE CONFIRMED — PRESENT</p>' +
+      '<p>Hello <strong>' + escapeHtml_(teamName) + '</strong>,</p>' +
+      '<p>Your attendance has been recorded successfully.</p>' +
+      '<div style="padding:16px;background:#1e1b4b;border-left:4px solid #8b5cf6;border-radius:8px;">' +
+      '<h3 style="margin-top:0;color:#c4b5fd;">VENUE & DIRECTIONS</h3>' +
+      '<p><strong>Venue:</strong> ' + escapeHtml_(CONFIG.venueHall) + '</p>' +
+      '<p><strong>Directions:</strong> ' + escapeHtml_(CONFIG.venueDirections) + '</p></div>' +
+      '<h3>Team Details</h3><p><strong>Team ID:</strong> ' + escapeHtml_(teamId) + '<br>' +
+      '<strong>Team Name:</strong> ' + escapeHtml_(teamName) + '<br>' +
+      '<strong>Team Lead:</strong> ' + escapeHtml_(leadName) + '</p>' +
+      '<p>Please proceed to the venue. For help, approach the event organizers.</p>' +
+      '<hr><p>Regards,<br><strong>Team LAKSHYA 2026</strong><br>SJBIT, Bengaluru</p></div>';
 
     MailApp.sendEmail({
       to: email,
@@ -644,49 +680,48 @@ function processAttendanceEmail(sheet, rowNumber) {
       name: "LAKSHYA 2026"
     });
 
-    emailStatusCell.setValue("SENT");
-    Logger.log("Row " + rowNumber + ": Directions email sent to " + email + " for Team " + teamId);
-
+    statusCell.setValue("SENT");
+    Logger.log("Attendance confirmation sent to " + email + " for " + teamId);
   } catch (error) {
-    console.error("Row " + rowNumber + " attendance email error:", error);
+    console.error("Attendance email failed for row " + rowNumber, error);
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (e) {}
+    if (lockAcquired) {
+      try { lock.releaseLock(); } catch (ignored) {}
+    }
   }
 }
 
 /**
- * Scans all rows and sends attendance arrival directions emails for any teams
- * marked as 'P' or 'Present' whose directions email has not yet been sent.
- * Safe to run manually or on an interval timer.
+ * Scans for teams marked Present whose attendance email has not been sent.
+ * This is installed as a five-minute time-driven trigger.
  */
 function checkAndSendAttendanceEmails() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheets()[0];
+  const sheet = getRegistrationSheet_();
   ensureColumns_(sheet);
 
   const columns = getColumns_(sheet);
-  if (!columns.attendanceEmail) return;
-
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
   const attendanceValues = sheet.getRange(2, columns.attendance, lastRow - 1, 1).getDisplayValues();
-  const emailStatuses = sheet.getRange(2, columns.attendanceEmail, lastRow - 1, 1).getDisplayValues();
+  const statusValues = sheet.getRange(2, columns.attendanceEmail, lastRow - 1, 1).getDisplayValues();
 
-  let sentCount = 0;
   for (let i = 0; i < attendanceValues.length; i++) {
-    const val = attendanceValues[i][0].trim().toUpperCase();
-    const status = emailStatuses[i][0].trim().toUpperCase();
+    const attendance = String(attendanceValues[i][0] || "").trim().toUpperCase();
+    const status = String(statusValues[i][0] || "").trim().toUpperCase();
 
-    if ((val === "P" || val === "PRESENT") && status !== "SENT") {
-      processAttendanceEmail(sheet, i + 2);
-      sentCount++;
+    if ((attendance === "P" || attendance === "PRESENT") && status !== "SENT") {
+      processAttendanceEmail_(sheet, i + 2);
     }
   }
+}
 
-  if (sentCount > 0) {
-    Logger.log("checkAndSendAttendanceEmails: Successfully sent " + sentCount + " directions emails.");
-  }
+/** Minimal HTML escaping for values inserted into the attendance email. */
+function escapeHtml_(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
