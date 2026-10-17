@@ -18,26 +18,67 @@ type TimestampDisplayOption = 'timings' | 'timestamp_link';
 
 const SPREADSHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d/11xu3PH0OzCCYMDq6LGrdiy7ANcluOHUYlBXJYWMXDQs/edit#gid=1086772870';
 
-function formatTiming(dateStr?: string): { time: string; date: string } {
-  if (!dateStr) return { time: '—', date: '' };
+function formatPaymentTimestamp(dateStr?: string): string {
+  if (!dateStr || !dateStr.trim()) return '—';
   try {
-    const d = new Date(dateStr);
+    let d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      // Handle Google Forms dates like "17/10/2026 18:52:05" or "10/17/2026 18:52:05"
+      const cleaned = dateStr.trim().replace(/,/g, '');
+      const parts = cleaned.split(/\s+/);
+      if (parts.length >= 2) {
+        const dp = parts[0].split(/[-/]/);
+        const tp = parts[1].split(':');
+        if (dp.length === 3 && tp.length >= 2) {
+          let day = parseInt(dp[0], 10);
+          let month = parseInt(dp[1], 10) - 1;
+          let year = parseInt(dp[2], 10);
+          if (dp[0].length === 4) {
+            year = parseInt(dp[0], 10);
+            month = parseInt(dp[1], 10) - 1;
+            day = parseInt(dp[2], 10);
+          } else if (day > 12) {
+            day = parseInt(dp[0], 10);
+            month = parseInt(dp[1], 10) - 1;
+            year = parseInt(dp[2], 10);
+          }
+          let hr = parseInt(tp[0], 10) || 0;
+          const min = parseInt(tp[1], 10) || 0;
+          const sec = parseInt(tp[2], 10) || 0;
+          const meridian = parts[2]?.toUpperCase();
+          if (meridian === 'PM' && hr < 12) hr += 12;
+          if (meridian === 'AM' && hr === 12) hr = 0;
+          d = new Date(year, month, day, hr, min, sec);
+        }
+      }
+    }
+
     if (!isNaN(d.getTime())) {
-      const time = d.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: 'Asia/Kolkata',
-      });
-      const date = d.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        timeZone: 'Asia/Kolkata',
-      });
-      return { time, date };
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+
+      let hours = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const strHours = String(hours).padStart(2, '0');
+
+      return `${day}/${month}/${year}, ${strHours}:${minutes}:${seconds} ${ampm}`;
     }
   } catch {
-    // Ignore fallback
+    // fallback
+  }
+  return dateStr;
+}
+
+function formatTiming(dateStr?: string): { time: string; date: string } {
+  if (!dateStr || !dateStr.trim()) return { time: '—', date: '' };
+  const formatted = formatPaymentTimestamp(dateStr);
+  if (formatted && formatted.includes(', ')) {
+    const [dPart, tPart] = formatted.split(', ');
+    return { date: dPart, time: tPart };
   }
   return { time: dateStr, date: '' };
 }
@@ -53,7 +94,7 @@ export default function PaymentsPage() {
   const [printDate, setPrintDate] = useState('');
 
   useEffect(() => {
-    setPrintDate(new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+    setPrintDate(formatPaymentTimestamp(new Date().toISOString()));
   }, []);
 
   // Statistics
@@ -169,13 +210,18 @@ export default function PaymentsPage() {
       <div className="hidden print:block mb-6 border-b-2 border-black pb-4 text-black">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold uppercase tracking-wider">LAKSHYA 2026 — Payment & UTR Verification Registry</h1>
-            <p className="text-xs text-gray-600 mt-1">Official Event Ledger for Accounts & Counter Audit</p>
+            <h1 className="text-2xl font-bold uppercase tracking-wider">LAKSHYA 2026 — PAYMENTS</h1>
           </div>
-          <div className="text-right text-xs text-gray-700">
-            <p><strong>Generated:</strong> {printDate || 'Current'} IST</p>
+          <div className="text-right text-xs text-gray-700 flex flex-col items-end gap-1">
+            <p><strong>Generated:</strong> {printDate || 'Current'}</p>
             <p><strong>Total Teams:</strong> {filteredTeams.length}</p>
-            <p><strong>UTR Verified:</strong> {stats.withUtr} ({stats.utrPct}%)</p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="font-semibold text-black text-xs">Confirm Payment:</span>
+              <div
+                className="w-5 h-5 border-2 border-black rounded-sm bg-white"
+                title="Tick to confirm payment"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -582,29 +628,29 @@ export default function PaymentsPage() {
           - Strictly: Team ID, Lead Name, Lead Number, UTR Number, and Payment Timestamp
       */}
       <div className="hidden print:block text-black">
-        <table className="w-full text-left text-[11px] border-collapse border border-gray-400">
+        <table className="w-full table-fixed text-left text-[12px] border-collapse border border-gray-400">
           <thead>
-            <tr className="bg-gray-100 text-black font-bold border-b border-gray-400">
-              <th className="py-2 px-2 border border-gray-400 text-center w-8">#</th>
-              <th className="py-2 px-2 border border-gray-400 w-28">Team ID</th>
-              <th className="py-2 px-2 border border-gray-400">Lead Name</th>
-              <th className="py-2 px-2 border border-gray-400">Lead Number</th>
-              <th className="py-2 px-2 border border-gray-400 font-mono">UTR Number</th>
-              <th className="py-2 px-2 border border-gray-400">Payment Timestamp</th>
+            <tr className="bg-gray-100 text-black font-bold border-b border-gray-400 text-[13px]">
+              <th className="py-2.5 px-2 border border-gray-400 text-center w-[6%]">#</th>
+              <th className="py-2.5 px-2 border border-gray-400 w-[16%]">Team ID</th>
+              <th className="py-2.5 px-2.5 border border-gray-400 w-[24%]">Lead Name</th>
+              <th className="py-2.5 px-2.5 border border-gray-400 w-[16%]">Lead Number</th>
+              <th className="py-2.5 px-2.5 border border-gray-400 w-[19%] font-mono">UTR Number</th>
+              <th className="py-2.5 px-2.5 border border-gray-400 w-[19%]">Payment Timestamp</th>
             </tr>
           </thead>
           <tbody>
             {filteredTeams.map((team, idx) => (
-              <tr key={team.teamId} className="border-b border-gray-300 page-break-inside-avoid">
-                <td className="py-1.5 px-2 border border-gray-300 text-center font-mono">{idx + 1}</td>
-                <td className="py-1.5 px-2 border border-gray-300 font-mono font-bold">{team.teamId}</td>
-                <td className="py-1.5 px-2 border border-gray-300 font-medium">{team.leaderName || '—'}</td>
-                <td className="py-1.5 px-2 border border-gray-300 font-mono">{team.leaderPhone || '—'}</td>
-                <td className="py-1.5 px-2 border border-gray-300 font-mono font-semibold">
+              <tr key={team.teamId} className="border-b border-gray-300 page-break-inside-avoid text-[12px]">
+                <td className="py-2 px-2 border border-gray-300 text-center font-mono align-top">{idx + 1}</td>
+                <td className="py-2 px-2 border border-gray-300 font-mono font-bold align-top break-words">{team.teamId}</td>
+                <td className="py-2 px-2.5 border border-gray-300 font-medium align-top break-words">{team.leaderName || '—'}</td>
+                <td className="py-2 px-2.5 border border-gray-300 font-mono align-top break-words">{team.leaderPhone || '—'}</td>
+                <td className="py-2 px-2.5 border border-gray-300 font-mono font-semibold align-top break-all">
                   {team.paymentRef || 'MISSING'}
                 </td>
-                <td className="py-1.5 px-2 border border-gray-300 font-mono text-xs">
-                  {team.registeredAt || '—'}
+                <td className="py-2 px-2.5 border border-gray-300 font-mono align-top break-words text-[11px] leading-snug">
+                  {formatPaymentTimestamp(team.registeredAt)}
                 </td>
               </tr>
             ))}

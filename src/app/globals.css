@@ -204,4 +204,12 @@ body {
   header, aside, nav, .print\:hidden {
     display: none !important;
   }
+  table {
+    table-layout: fixed;
+    width: 100% !important;
+  }
+  th, td {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
 }
