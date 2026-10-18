@@ -25,15 +25,34 @@ import { toast } from 'sonner';
 export default function RegistrationDirectoryPage() {
   const router = useRouter();
   const { teams, loading, lastSync, syncInProgress, syncNow } = useTeams();
-  const { role } = useAuth();
+  const { role, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [collegeFilter, setCollegeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [exporting, setExporting] = useState(false);
 
-  // Access permissions
-  const canViewDirectory = true;
-  const canExport = true;
+  // Access permissions based on user role
+  const canViewDirectory = hasPermission(role, 'canViewDirectory');
+  const canExport = hasPermission(role, 'canExport');
+
+  useEffect(() => {
+    if (!authLoading && role && !canViewDirectory) {
+      toast.error('Access restricted to Administrators only');
+      router.replace('/admin/check-in');
+    }
+  }, [authLoading, role, canViewDirectory, router]);
+
+  if (!authLoading && role && !canViewDirectory) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <ShieldAlert className="h-12 w-12 text-amber-400" />
+        <h2 className="text-lg font-bold text-white">Access Restricted</h2>
+        <p className="text-xs text-[#808080] max-w-md">
+          Registration Directory is restricted to Administrators. Redirecting to Check-in Desk...
+        </p>
+      </div>
+    );
+  }
 
   const colleges = useMemo(() => {
     const set = new Set<string>();

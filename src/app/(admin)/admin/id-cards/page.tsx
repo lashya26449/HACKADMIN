@@ -1,18 +1,45 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search, FileText, ExternalLink, RefreshCw, Eye,
-  Hash, School, User, CheckCircle2, AlertCircle
+  Hash, School, User, CheckCircle2, AlertCircle, ShieldAlert
 } from 'lucide-react';
 import { CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useTeams } from '@/contexts/TeamsContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, extractDriveFileId } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function IdCardsPage() {
+  const router = useRouter();
   const { teams, loading } = useTeams();
+  const { role, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
+
+  const canView = hasPermission(role, 'canViewIdCards');
+
+  useEffect(() => {
+    if (!authLoading && role && !canView) {
+      toast.error('Access restricted to Administrators only');
+      router.replace('/admin/check-in');
+    }
+  }, [authLoading, role, canView, router]);
+
+  if (!authLoading && role && !canView) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <ShieldAlert className="h-12 w-12 text-amber-400" />
+        <h2 className="text-lg font-bold text-white">Access Restricted</h2>
+        <p className="text-xs text-[#808080] max-w-md">
+          College ID Cards verification is restricted to Administrators only. Redirecting to Check-in Desk...
+        </p>
+      </div>
+    );
+  }
 
   const trimmedSearch = trimTeamId(search).toLowerCase();
 

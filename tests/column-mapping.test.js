@@ -860,6 +860,87 @@ test('24. Gap-filling Team ID allocation: skips LAK-001, fills 26-33, skips 34-3
   assert.equal(subsequent, 'LAK-037', 'Must proceed sequentially to LAK-037');
 });
 
+test('25. RBAC page-level and navigation isolation: checkin_organizer can only access check-in desk', () => {
+  const ROLE_PERMISSIONS = {
+    super_admin: {
+      canCheckIn: true,
+      canViewDirectory: true,
+      canViewIdCards: true,
+      canViewPayments: true,
+      canViewAudit: true,
+      canExport: true,
+    },
+    checkin_organizer: {
+      canCheckIn: true,
+      canViewDirectory: false,
+      canViewIdCards: false,
+      canViewPayments: false,
+      canViewAudit: false,
+      canExport: false,
+    },
+    readonly_viewer: {
+      canCheckIn: false,
+      canViewDirectory: true,
+      canViewIdCards: true,
+      canViewPayments: true,
+      canViewAudit: true,
+      canExport: true,
+    },
+  };
+
+  function hasPermission(role, permission) {
+    if (!role) return false;
+    return ROLE_PERMISSIONS[role]?.[permission] ?? false;
+  }
+
+  function getVisibleNavTabs(role) {
+    const tabs = [];
+    if (hasPermission(role, 'canCheckIn')) tabs.push('/admin/check-in');
+    if (hasPermission(role, 'canViewPayments')) tabs.push('/admin/payments');
+    if (hasPermission(role, 'canViewDirectory')) tabs.push('/admin/directory');
+    if (hasPermission(role, 'canViewIdCards')) tabs.push('/admin/id-cards');
+    if (hasPermission(role, 'canViewAudit')) tabs.push('/admin/activity');
+    return tabs;
+  }
+
+  function checkRouteAccess(role, path) {
+    if (role === 'checkin_organizer') {
+      return path === '/admin/check-in';
+    }
+    if (role === 'super_admin') {
+      return true;
+    }
+    if (role === 'readonly_viewer') {
+      return path !== '/admin/check-in';
+    }
+    return false;
+  }
+
+  // 1. Checkin Organizer permissions
+  assert.equal(hasPermission('checkin_organizer', 'canCheckIn'), true, 'Organizer can check in');
+  assert.equal(hasPermission('checkin_organizer', 'canViewPayments'), false, 'Organizer CANNOT view payments');
+  assert.equal(hasPermission('checkin_organizer', 'canViewDirectory'), false, 'Organizer CANNOT view directory');
+  assert.equal(hasPermission('checkin_organizer', 'canViewIdCards'), false, 'Organizer CANNOT view ID cards');
+  assert.equal(hasPermission('checkin_organizer', 'canViewAudit'), false, 'Organizer CANNOT view activity audit');
+  assert.equal(hasPermission('checkin_organizer', 'canExport'), false, 'Organizer CANNOT export registrations');
+
+  // 2. Visible navigation tabs for Checkin Organizer must be ONLY Check-in
+  const organizerTabs = getVisibleNavTabs('checkin_organizer');
+  assert.deepEqual(organizerTabs, ['/admin/check-in'], 'Organizer must ONLY see Check-in navigation link');
+
+  // 3. Super Admin sees all 5 tabs
+  const adminTabs = getVisibleNavTabs('super_admin');
+  assert.equal(adminTabs.length, 5, 'Super admin must see all 5 navigation links');
+
+  // 4. Route access checks for checkin_organizer
+  assert.equal(checkRouteAccess('checkin_organizer', '/admin/check-in'), true);
+  assert.equal(checkRouteAccess('checkin_organizer', '/admin/payments'), false);
+  assert.equal(checkRouteAccess('checkin_organizer', '/admin/directory'), false);
+  assert.equal(checkRouteAccess('checkin_organizer', '/admin/id-cards'), false);
+  assert.equal(checkRouteAccess('checkin_organizer', '/admin/activity'), false);
+});
+
+
 
 
 

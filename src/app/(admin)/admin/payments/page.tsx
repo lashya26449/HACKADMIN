@@ -1,16 +1,18 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   CreditCard, Search, Download, Printer, ExternalLink,
   Copy, Check, AlertCircle, RefreshCw,
   Hash, School, User, Phone, CheckCircle2,
-  Clock
+  Clock, ShieldAlert
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTeams } from '@/contexts/TeamsContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { toast } from 'sonner';
 
 type PaymentFilter = 'all' | 'utr_submitted' | 'utr_missing' | 'has_proof' | 'present';
@@ -83,17 +85,39 @@ function formatTiming(dateStr?: string): { time: string; date: string } {
 }
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const { teams, loading, syncInProgress, syncNow } = useTeams();
-  const { getIdToken } = useAuth();
+  const { role, loading: authLoading, getIdToken } = useAuth();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PaymentFilter>('all');
   const [copiedUtr, setCopiedUtr] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [printDate, setPrintDate] = useState('');
 
+  const canView = hasPermission(role, 'canViewPayments');
+
+  useEffect(() => {
+    if (!authLoading && role && !canView) {
+      toast.error('Access restricted to Administrators only');
+      router.replace('/admin/check-in');
+    }
+  }, [authLoading, role, canView, router]);
+
   useEffect(() => {
     setPrintDate(formatPaymentTimestamp(new Date().toISOString()));
   }, []);
+
+  if (!authLoading && role && !canView) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <ShieldAlert className="h-12 w-12 text-amber-400" />
+        <h2 className="text-lg font-bold text-white">Access Restricted</h2>
+        <p className="text-xs text-[#808080] max-w-md">
+          Payments & UTR Verification is restricted to Administrators only. Redirecting to Check-in Desk...
+        </p>
+      </div>
+    );
+  }
 
   // Statistics
   const stats = useMemo(() => {

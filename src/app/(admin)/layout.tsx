@@ -1,19 +1,38 @@
 'use client';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { TeamsProvider } from '@/contexts/TeamsContext';
+import { hasPermission } from '@/lib/firebase/auth-helpers';
+import { toast } from 'sonner';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+
+    if (!user) {
       router.replace('/login');
+      return;
     }
-  }, [user, loading, router]);
+
+    // Role-based route guard: checkin_organizer has access ONLY to check-in
+    if (role === 'checkin_organizer') {
+      if (pathname !== '/admin/check-in') {
+        toast.error('Access restricted to Check-in Desk only');
+        router.replace('/admin/check-in');
+      }
+    } else if (role === 'readonly_viewer') {
+      if (pathname === '/admin/check-in') {
+        toast.error('Auditor / Viewer accounts cannot access the Check-in Desk');
+        router.replace('/admin/directory');
+      }
+    }
+  }, [user, role, loading, pathname, router]);
 
   return (
     <TeamsProvider>

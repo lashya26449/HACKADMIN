@@ -13,6 +13,7 @@ import { QuickSearchDialog } from '@/components/shortcuts/QuickSearchDialog';
 import { ExportOptionsDialog } from '@/components/export/ExportOptionsDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useRouter } from 'next/navigation';
+import { hasPermission } from '@/lib/firebase/auth-helpers';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/check-in': 'Attendance Management',
@@ -143,63 +144,73 @@ export function AppHeader() {
         <h1 className="text-xs font-medium text-[#B5B5B5] tracking-tight hidden xl:inline">{title}</h1>
       </div>
 
-      {/* Universal Full-Width Navigation Bar */}
+      {/* Role-Filtered Navigation Bar */}
       <div className="flex items-center gap-1 ml-1 sm:ml-2 pl-2 border-l border-white/10 text-xs overflow-x-auto py-1 shrink min-w-0">
-        <Link
-          href="/admin/check-in"
-          className={cn(
-            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
-            pathname === '/admin/check-in'
-              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
-              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
-          )}
-        >
-          Check-in
-        </Link>
-        <Link
-          href="/admin/payments"
-          className={cn(
-            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
-            pathname.startsWith('/admin/payments')
-              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
-              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
-          )}
-        >
-          Payments & UTR
-        </Link>
-        <Link
-          href="/admin/directory"
-          className={cn(
-            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
-            pathname.startsWith('/admin/directory')
-              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
-              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
-          )}
-        >
-          Directory
-        </Link>
-        <Link
-          href="/admin/id-cards"
-          className={cn(
-            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
-            pathname.startsWith('/admin/id-cards')
-              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
-              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
-          )}
-        >
-          ID Cards
-        </Link>
-        <Link
-          href="/admin/activity"
-          className={cn(
-            "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
-            pathname.startsWith('/admin/activity')
-              ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
-              : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
-          )}
-        >
-          Activity
-        </Link>
+        {hasPermission(role, 'canCheckIn') && (
+          <Link
+            href="/admin/check-in"
+            className={cn(
+              "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
+              pathname === '/admin/check-in'
+                ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+                : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
+            )}
+          >
+            Check-in
+          </Link>
+        )}
+        {hasPermission(role, 'canViewPayments') && (
+          <Link
+            href="/admin/payments"
+            className={cn(
+              "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
+              pathname.startsWith('/admin/payments')
+                ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+                : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
+            )}
+          >
+            Payments & UTR
+          </Link>
+        )}
+        {hasPermission(role, 'canViewDirectory') && (
+          <Link
+            href="/admin/directory"
+            className={cn(
+              "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
+              pathname.startsWith('/admin/directory')
+                ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+                : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
+            )}
+          >
+            Directory
+          </Link>
+        )}
+        {hasPermission(role, 'canViewIdCards') && (
+          <Link
+            href="/admin/id-cards"
+            className={cn(
+              "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
+              pathname.startsWith('/admin/id-cards')
+                ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+                : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
+            )}
+          >
+            ID Cards
+          </Link>
+        )}
+        {hasPermission(role, 'canViewAudit') && (
+          <Link
+            href="/admin/activity"
+            className={cn(
+              "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
+              pathname.startsWith('/admin/activity')
+                ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+                : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
+            )}
+          >
+            Activity
+          </Link>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-2.5">

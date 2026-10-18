@@ -70,7 +70,7 @@ const READINESS_ITEMS: ReadinessCheck[] = [
 
 export default function ActivityPage() {
   const router = useRouter();
-  const { role } = useAuth();
+  const { role, loading: authLoading } = useAuth();
   const { teams, lastSync, syncHealth, syncNow, syncInProgress } = useTeams();
   const [auditEntries] = useState<AuditEntry[]>([]);
   const [readiness] = useState<ReadinessCheck[]>(READINESS_ITEMS);
@@ -93,8 +93,27 @@ export default function ActivityPage() {
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
 
-  // Access permissions
-  const canViewAudit = true;
+  // Access permissions based on user role
+  const canViewAudit = hasPermission(role, 'canViewAudit');
+
+  useEffect(() => {
+    if (!authLoading && role && !canViewAudit) {
+      toast.error('Access restricted to Administrators only');
+      router.replace('/admin/check-in');
+    }
+  }, [authLoading, role, canViewAudit, router]);
+
+  if (!authLoading && role && !canViewAudit) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <ShieldAlert className="h-12 w-12 text-amber-400" />
+        <h2 className="text-lg font-bold text-white">Access Restricted</h2>
+        <p className="text-xs text-[#808080] max-w-md">
+          Governance & Activity Audit is restricted to Administrators. Redirecting to Check-in Desk...
+        </p>
+      </div>
+    );
+  }
 
   const handleInspectSheet = async () => {
     try {
