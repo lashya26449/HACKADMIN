@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import {
-  CheckCircle2, Loader2, AlertTriangle, ArrowRight, MapPin, Mail
+  CheckCircle2, Loader2, AlertTriangle, ArrowRight, MapPin, Mail, MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -144,14 +144,35 @@ export function TeamCard({
           {/* RIGHT AREA — ATTENDANCE ACTION */}
           <div className="shrink-0 min-w-[130px] flex justify-end">
             {isPresent ? (
-              <Button
-                size="sm"
-                disabled
-                className="h-9 px-4 text-xs font-semibold bg-white/[0.03] border border-white/10 text-[#606060] opacity-50 cursor-not-allowed rounded-lg"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
-                Present
-              </Button>
+              <div className="flex items-center gap-2">
+                {team.leaderPhone && (
+                  <a
+                    href={(() => {
+                      const digits = team.leaderPhone.replace(/\D/g, '');
+                      const phone = digits.length === 10 ? `91${digits}` : digits;
+                      const msg = encodeURIComponent(
+                        `Hello ${team.teamName || 'Team'}!\n\nYour attendance has been marked PRESENT for LAKSHYA 2026.\n\n📍 Destination: CSE Seminar Hall\nDirections: Go straight and take a left\n\nWelcome to LAKSHYA 2026!`
+                      );
+                      return `https://wa.me/${phone}?text=${msg}`;
+                    })()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95"
+                    title={`Ping ${team.leaderName || 'Lead'} on WhatsApp with arrival directions`}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">WhatsApp Ping</span>
+                  </a>
+                )}
+                <Button
+                  size="sm"
+                  disabled
+                  className="h-9 px-3 text-xs font-semibold bg-white/[0.03] border border-white/10 text-[#606060] opacity-50 cursor-not-allowed rounded-lg"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
+                  Present
+                </Button>
+              </div>
             ) : (
               <Button
                 size="sm"

@@ -26,7 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail } from 'lucide-react';
+import { CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail, MessageSquare } from 'lucide-react';
 import { sound } from '@/lib/audio';
 
 export default function CheckInPage() {
@@ -84,12 +84,40 @@ export default function CheckInPage() {
     });
   }, [teams, filter, trimmedSearch]);
 
-  // Bound selectedIndex when filtered teams change
+  // Suggestion 1: Auto-select exact match or single result so Enter works instantly
   useEffect(() => {
-    if (selectedIndex !== null && selectedIndex >= filteredTeams.length) {
-      setSelectedIndex(filteredTeams.length > 0 ? filteredTeams.length - 1 : null);
+    if (!trimmedSearch) {
+      if (selectedIndex !== null && selectedIndex >= filteredTeams.length) {
+        setSelectedIndex(filteredTeams.length > 0 ? filteredTeams.length - 1 : null);
+      }
+      return;
     }
-  }, [filteredTeams.length, selectedIndex]);
+
+    if (filteredTeams.length === 1) {
+      setSelectedIndex(0);
+      return;
+    }
+
+    if (filteredTeams.length > 1) {
+      // Prioritize exact Team ID match (e.g., "005" matches "LAK-005" or "LAK-005" matches "LAK-005")
+      const exactIdx = filteredTeams.findIndex(t => {
+        const idLower = t.teamId.toLowerCase();
+        const normId = idLower.replace(/^(?:lak-?)?0*/i, '');
+        const normQuery = trimmedSearch.replace(/^(?:lak-?)?0*/i, '');
+        return idLower === trimmedSearch || (normQuery.length > 0 && normId === normQuery);
+      });
+      if (exactIdx >= 0) {
+        setSelectedIndex(exactIdx);
+        return;
+      }
+    }
+
+    if (selectedIndex === null && filteredTeams.length > 0) {
+      setSelectedIndex(0);
+    } else if (selectedIndex !== null && selectedIndex >= filteredTeams.length) {
+      setSelectedIndex(filteredTeams.length > 0 ? 0 : null);
+    }
+  }, [filteredTeams, trimmedSearch, selectedIndex]);
 
   const counts = useMemo(
     () => ({
@@ -106,8 +134,20 @@ export default function CheckInPage() {
     const team = teams.find(t => t.teamId.toLowerCase() === teamId.toLowerCase());
     if (!team) return;
 
+    // Suggestion 9: Duplicate Check-in Soft Lock & Graceful Feedback
     if (team.isPresent) {
-      toast.info(`Team ${teamId} is already marked present.`);
+      toast.info(
+        <div className="flex flex-col gap-1">
+          <div className="font-semibold text-white">Team {teamId} Already Checked In</div>
+          <div className="text-[11px] text-[#A0A0A0]">
+            This team was already marked Present. No further action needed.
+          </div>
+        </div>,
+        { duration: 4000 }
+      );
+      // Suggestion 3: Clear search so desk is ready
+      setSearch('');
+      setTimeout(() => searchInputRef.current?.focus(), 50);
       return;
     }
 
@@ -150,9 +190,31 @@ export default function CheckInPage() {
         // Play crisp check-in success chime
         sound.playSuccessChime();
 
+        // Build WhatsApp Ping URL for Team Lead
+        const digits = (team.leaderPhone || '').replace(/\D/g, '');
+        const cleanPhone = digits.length === 10 ? `91${digits}` : digits;
+        const waMsg = encodeURIComponent(
+          `Hello ${team.teamName || 'Team'}!\n\nYour attendance has been marked PRESENT for LAKSHYA 2026.\n\n📍 Destination: CSE Seminar Hall\nDirections: Go straight and take a left\n\nWelcome to LAKSHYA 2026!`
+        );
+        const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${waMsg}` : null;
+
         toast.success(
-          `Team ${teamId} Checked In! Arrival mail triggered.`,
-          { duration: 5000 }
+          <div className="flex flex-col gap-1.5">
+            <div className="font-semibold text-white">Team {teamId} Checked In!</div>
+            <div className="text-[11px] text-emerald-300">Arrival email triggered &amp; Sheets updated.</div>
+            {waUrl && (
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/40 text-xs font-semibold transition-colors w-fit shadow-[0_0_10px_rgba(37,211,102,0.2)]"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>Ping Team Lead on WhatsApp</span>
+              </a>
+            )}
+          </div>,
+          { duration: 8000 }
         );
 
         // Update local state to Present
@@ -170,17 +232,29 @@ export default function CheckInPage() {
         };
         setRecentActivity(prev => [entry, ...prev].slice(0, 30));
         setAnnouncement(`Team ${teamId} Checked In! Arrival mail triggered.`);
+
+        // Suggestion 3: Instant search clear & refocus for the next team in line
+        setSearch('');
+        setSelectedIndex(null);
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 60);
       } else {
         sound.playWarningTone();
         // Fallback: still mark present locally so event check-in desk is never blocked
         updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
         toast.warning(`Marked present locally. Note: ${data.error || 'Server sync pending'}`);
+        // Clear search on local fallback too
+        setSearch('');
+        setTimeout(() => searchInputRef.current?.focus(), 60);
       }
     } catch {
       sound.playWarningTone();
       // Offline / network failure fallback
       updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
       toast.warning(`Marked present locally (offline/network pending)`);
+      setSearch('');
+      setTimeout(() => searchInputRef.current?.focus(), 60);
     } finally {
       setProcessingTeamId(undefined);
     }

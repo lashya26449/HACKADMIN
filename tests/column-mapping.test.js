@@ -998,6 +998,45 @@ test('26. QuickSearch ranking and UTR threshold: prevents 005 from falsely retur
   assert.equal(resUtr[0].teamId, 'LAK-024', 'Full UTR search must match LAK-024');
 });
 
+test('27. Auto-select exact match and WhatsApp arrival ping URL construction', () => {
+  // 1. WhatsApp URL builder logic
+  function buildWhatsAppArrivalUrl(teamName, phone) {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    const cleanPhone = digits.length === 10 ? `91${digits}` : digits;
+    const msg = encodeURIComponent(
+      `Hello ${teamName}!\n\nYour attendance has been marked PRESENT for LAKSHYA 2026.\n\n📍 Destination: CSE Seminar Hall\nDirections: Go straight and take a left\n\nWelcome to LAKSHYA 2026!`
+    );
+    return `https://wa.me/${cleanPhone}?text=${msg}`;
+  }
+
+  const url = buildWhatsAppArrivalUrl('Byte Busters', '9876543210');
+  assert.ok(url.startsWith('https://wa.me/919876543210?text='));
+  assert.ok(url.includes('CSE%20Seminar%20Hall'));
+  assert.ok(url.includes('Go%20straight%20and%20take%20a%20left'));
+
+  // 2. Auto-select exact index logic
+  const teams = [
+    { teamId: 'LAK-005', teamName: 'Alpha' },
+    { teamId: 'LAK-050', teamName: 'Beta' },
+  ];
+  function getAutoSelectedIndex(filtered, query) {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return null;
+    if (filtered.length === 1) return 0;
+    const exactIdx = filtered.findIndex(t => {
+      const idLower = t.teamId.toLowerCase();
+      const normId = idLower.replace(/^(?:lak-?)?0*/i, '');
+      const normQuery = trimmed.replace(/^(?:lak-?)?0*/i, '');
+      return idLower === trimmed || (normQuery.length > 0 && normId === normQuery);
+    });
+    return exactIdx >= 0 ? exactIdx : 0;
+  }
+
+  assert.equal(getAutoSelectedIndex(teams, '005'), 0, 'Exact match 005 must select LAK-005 index 0');
+  assert.equal(getAutoSelectedIndex(teams, '050'), 1, 'Exact match 050 must select LAK-050 index 1');
+});
+
 
 
 

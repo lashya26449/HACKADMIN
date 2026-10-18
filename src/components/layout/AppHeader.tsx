@@ -27,7 +27,12 @@ const PAGE_TITLES: Record<string, string> = {
 export function AppHeader() {
   const pathname = usePathname();
   const { user, role, signOut } = useAuth();
-  const { isOnline, sheetsConnected, syncInProgress, syncNow } = useTeams();
+  const { teams, isOnline, sheetsConnected, syncInProgress, syncNow } = useTeams();
+
+  // Live Attendance Counts for Header (Suggestion 10)
+  const totalTeams = teams.length;
+  const presentTeams = teams.filter(t => t.isPresent).length;
+  const presentPercent = totalTeams > 0 ? Math.round((presentTeams / totalTeams) * 100) : 0;
 
   // Live IST Date & Time combined (Asia/Kolkata)
   const [istDateTime, setIstDateTime] = useState<string>('');
@@ -214,6 +219,32 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
+        {/* Suggestion 10: Live Desk Attendance Counter Bar */}
+        {totalTeams > 0 && (
+          <div
+            className="flex items-center gap-2 text-xs font-mono rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 shadow-sm shrink-0"
+            title={`Live Event Attendance: ${presentTeams} of ${totalTeams} teams checked in (${presentPercent}%)`}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[#888888] hidden sm:inline text-[11px]">Present:</span>
+              <span className="font-bold text-emerald-400">{presentTeams}</span>
+              <span className="text-[#666666]">/</span>
+              <span className="text-[#B5B5B5]">{totalTeams}</span>
+              <span className="text-[10px] text-emerald-400/90 font-semibold bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded hidden xs:inline">
+                {presentPercent}%
+              </span>
+            </div>
+            {/* Mini visual progress bar */}
+            <div className="w-10 sm:w-14 h-1.5 rounded-full bg-white/10 overflow-hidden hidden md:block">
+              <div
+                className="h-full bg-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                style={{ width: `${presentPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Live IST Clock */}
         {istDateTime && (
           <div className="hidden xl:flex items-center gap-1.5 text-xs text-[#B5B5B5] font-mono rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 shadow-sm">
