@@ -134,7 +134,7 @@ export function AppHeader() {
   ], !isCheckInPage);
 
   return (
-    <header className="print:hidden flex h-14 shrink-0 items-center gap-2 md:gap-3 border-b border-white/10 bg-[#080808]/95 px-3 md:px-6 backdrop-blur-xl z-20 w-full">
+    <header className="print:hidden relative flex h-14 shrink-0 items-center gap-2 md:gap-3 border-b border-white/10 bg-[#080808]/95 px-3 md:px-6 backdrop-blur-xl z-50 w-full">
       {/* Page Title & Brand */}
       <div className="flex items-center gap-2 shrink-0">
         <Link href="/admin/check-in" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
@@ -324,7 +324,7 @@ export function AppHeader() {
 
           {/* Floating Dropdown Menu */}
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/15 bg-[#0C0C0C]/95 backdrop-blur-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(16,185,129,0.12)] z-50 animate-in fade-in-0 zoom-in-95">
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/15 bg-[#0C0C0C]/95 backdrop-blur-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(16,185,129,0.12)] z-[100] animate-in fade-in-0 zoom-in-95">
               <div className="px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/5 mb-1">
                 <p className="text-[10px] font-mono text-[#808080] uppercase tracking-wider">Signed in as</p>
                 <p className="text-xs font-semibold text-[#F0F0F0] truncate mt-0.5" title={user?.email || 'admin@hackadmin.dev'}>

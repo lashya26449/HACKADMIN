@@ -178,7 +178,15 @@ export function TeamCard({
 
       {/* Confirmation Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md bg-[#101010] border-white/10 text-[#F0F0F0]">
+        <DialogContent
+          className="max-w-md bg-[#101010] border-white/10 text-[#F0F0F0]"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleConfirm();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-[#F0F0F0]">
               Confirm Team Attendance
@@ -243,17 +251,18 @@ export function TeamCard({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)} className="border-white/10 bg-white/[0.04]">
-              Cancel
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)} className="border-white/10 bg-white/[0.04] text-[#A0A0A0] hover:text-white">
+              Cancel (Esc)
             </Button>
             <Button
               size="sm"
+              autoFocus
               onClick={handleConfirm}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Confirm &amp; Write &apos;P&apos;
+              Confirm &amp; Write &apos;P&apos; (Enter ↵)
             </Button>
           </DialogFooter>
         </DialogContent>

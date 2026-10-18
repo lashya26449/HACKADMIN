@@ -447,7 +447,7 @@ export default function CheckInPage() {
       />
 
       {/* Sticky Full-Width Search & Filter Bar */}
-      <div className="sticky top-0 z-30 bg-[#080808]/95 backdrop-blur-2xl py-3.5 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 border-b border-white/10 transition-all space-y-3">
+      <div className="sticky top-14 z-20 bg-[#080808]/95 backdrop-blur-2xl py-3.5 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 border-b border-white/10 transition-all space-y-3">
         {/* Row 1: Full-width search bar extending across entire workspace */}
         <div className="w-full">
           <SearchBar
@@ -543,7 +543,18 @@ export default function CheckInPage() {
 
       {/* CENTRALIZED ATTENDANCE CONFIRMATION MODAL */}
       <Dialog open={Boolean(confirmingTeam)} onOpenChange={open => !open && setConfirmingTeam(null)}>
-        <DialogContent className="max-w-md bg-[#101010] border-white/10 text-[#F0F0F0]">
+        <DialogContent
+          className="max-w-md bg-[#101010] border-white/10 text-[#F0F0F0]"
+          onKeyDown={async (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (!confirmingTeam || processingTeamId === confirmingTeam.teamId) return;
+              const target = confirmingTeam;
+              setConfirmingTeam(null);
+              await handleCheckIn(target.teamId, target.rowIndex);
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-[#F0F0F0]">
               Confirm Team Attendance
@@ -620,27 +631,28 @@ export default function CheckInPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setConfirmingTeam(null)}
-              className="border-white/10 bg-white/[0.04]"
+              className="border-white/10 bg-white/[0.04] text-[#A0A0A0] hover:text-white"
             >
               Cancel (Esc)
             </Button>
             <Button
               size="sm"
+              autoFocus
               onClick={async () => {
                 if (!confirmingTeam) return;
                 const target = confirmingTeam;
                 setConfirmingTeam(null);
                 await handleCheckIn(target.teamId, target.rowIndex);
               }}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Confirm &amp; Write &apos;P&apos;
+              Confirm &amp; Write &apos;P&apos; (Enter ↵)
             </Button>
           </DialogFooter>
         </DialogContent>
