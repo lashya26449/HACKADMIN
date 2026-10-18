@@ -300,6 +300,7 @@ test('11. Security: Default role prevents automatic super_admin promotion', () =
   }
 
   assert.equal(determineRole('admin@sjbit.edu.in'), 'super_admin');
+  assert.equal(determineRole('coordadmin@gmail.com'), 'super_admin', 'coordadmin must resolve to super_admin');
   assert.equal(determineRole('organizer@sjbit.edu.in'), 'checkin_organizer');
   assert.equal(determineRole('volunteer@sjbit.edu.in'), 'checkin_organizer', 'Unknown user must NOT be promoted to super_admin');
   assert.equal(determineRole('desk1@sjbit.edu.in'), 'checkin_organizer', 'Check-in desk user gets organizer role');

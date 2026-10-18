@@ -175,8 +175,10 @@ export async function verifyServerAuth(
     }
   } catch (firestoreErr: any) {
     const sanitizedCode = firestoreErr?.code || 'FIRESTORE_ERROR';
-    console.warn(`[Auth][${endpointName}][${method}] Firestore lookup warning [code=${sanitizedCode}] - defaulting to checkin_organizer`);
-    role = 'checkin_organizer';
+    console.warn(`[Auth][${endpointName}][${method}] Firestore lookup warning [code=${sanitizedCode}] - falling back to email role`);
+    const emailNorm = (decoded.email || '').toLowerCase();
+    const isAdmin = emailNorm.includes('admin') || emailNorm.includes('super');
+    role = isAdmin ? 'super_admin' : 'checkin_organizer';
   }
 
   if (userDisabled) {

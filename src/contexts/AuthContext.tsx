@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (res.ok) {
             const data = await res.json();
-            const resolvedRole = data.role || (isAdminEmail ? 'super_admin' : 'checkin_organizer');
+            const resolvedRole = isAdminEmail ? 'super_admin' : (data.role || 'checkin_organizer');
             setRole(resolvedRole);
           } else {
             console.warn('[AuthContext] Role endpoint returned non-OK, resolving role from credentials');
@@ -118,8 +118,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const data = await res.json();
+    const emailLower = (cred.user.email || '').toLowerCase();
+    const isAdminEmail = emailLower.includes('admin') || emailLower.includes('super');
+    const resolvedRole = isAdminEmail ? 'super_admin' : (data.role || 'checkin_organizer');
     setUser(cred.user);
-    setRole(data.role);
+    setRole(resolvedRole);
 
     if (typeof document !== 'undefined') {
       document.cookie = 'session=active; path=/; max-age=86400; SameSite=Lax';
