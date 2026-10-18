@@ -43,14 +43,43 @@ export function QuickSearchDialog({
     if (!trimmedQuery) {
       return teams.slice(0, 10); // Show top 10 by default
     }
-    return teams.filter(t => {
-      const matchId = t.teamId.toLowerCase().includes(trimmedQuery);
-      const matchName = t.teamName.toLowerCase().includes(trimmedQuery);
-      const matchLead = (t.leaderName ?? '').toLowerCase().includes(trimmedQuery);
-      const matchCollege = (t.college ?? '').toLowerCase().includes(trimmedQuery);
-      const matchUtr = (t.paymentRef ?? '').toLowerCase().includes(trimmedQuery);
-      return matchId || matchName || matchLead || matchCollege || matchUtr;
-    }).slice(0, 20); // Limit to 20 for snappy performance
+
+    // Score and rank matches so exact and prefix Team ID matches always appear first
+    const scored = teams
+      .map(t => {
+        const idLower = t.teamId.toLowerCase();
+        // Normalize digits: "lak-005" -> "5", "005" -> "5"
+        const numInId = idLower.replace(/^lak-?0*/, '');
+        const numInQuery = trimmedQuery.replace(/^lak-?0*/, '');
+
+        const matchExactId = idLower === trimmedQuery || (numInQuery.length > 0 && numInId === numInQuery);
+        const matchIdPrefix = idLower.startsWith(trimmedQuery) || idLower.includes(trimmedQuery);
+        const matchName = t.teamName.toLowerCase().includes(trimmedQuery);
+        const matchLead = (t.leaderName ?? '').toLowerCase().includes(trimmedQuery);
+        const matchCollege = (t.college ?? '').toLowerCase().includes(trimmedQuery);
+
+        // Prevent short numeric queries (like 005, 24) from accidentally matching 12-digit UTR substrings.
+        // UTR matching is only active when query is >= 5 characters.
+        const matchUtr = trimmedQuery.length >= 5 && (t.paymentRef ?? '').toLowerCase().includes(trimmedQuery);
+
+        if (!matchExactId && !matchIdPrefix && !matchName && !matchLead && !matchCollege && !matchUtr) {
+          return null;
+        }
+
+        let score = 0;
+        if (matchExactId) score = 100;
+        else if (matchIdPrefix) score = 80;
+        else if (matchName) score = 60;
+        else if (matchLead) score = 50;
+        else if (matchCollege) score = 40;
+        else if (matchUtr) score = 20;
+
+        return { team: t, score };
+      })
+      .filter((item): item is { team: Team; score: number } => item !== null)
+      .sort((a, b) => b.score - a.score);
+
+    return scored.slice(0, 20).map(s => s.team);
   }, [teams, trimmedQuery]);
 
   // Keep selected index within bounds

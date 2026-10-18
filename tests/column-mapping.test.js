@@ -940,6 +940,65 @@ test('25. RBAC page-level and navigation isolation: checkin_organizer can only a
   assert.equal(checkRouteAccess('checkin_organizer', '/admin/activity'), false);
 });
 
+test('26. QuickSearch ranking and UTR threshold: prevents 005 from falsely returning LAK-024 while allowing full UTR lookup', () => {
+  const sampleTeams = [
+    { teamId: 'LAK-005', teamName: 'Pixel Pirates', leaderName: 'Ravi', college: 'VIT', paymentRef: '123456789012' },
+    { teamId: 'LAK-024', teamName: 'Timeslion', leaderName: 'Vignesh R', college: 'SJBIT', paymentRef: '005978286342' },
+  ];
+
+  function searchTeams(teams, query) {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (!trimmedQuery) return teams.slice(0, 10);
+
+    const scored = teams
+      .map(t => {
+        const idLower = t.teamId.toLowerCase();
+        const numInId = idLower.replace(/^lak-?0*/, '');
+        const numInQuery = trimmedQuery.replace(/^lak-?0*/, '');
+
+        const matchExactId = idLower === trimmedQuery || (numInQuery.length > 0 && numInId === numInQuery);
+        const matchIdPrefix = idLower.startsWith(trimmedQuery) || idLower.includes(trimmedQuery);
+        const matchName = t.teamName.toLowerCase().includes(trimmedQuery);
+        const matchLead = (t.leaderName ?? '').toLowerCase().includes(trimmedQuery);
+        const matchCollege = (t.college ?? '').toLowerCase().includes(trimmedQuery);
+        const matchUtr = trimmedQuery.length >= 5 && (t.paymentRef ?? '').toLowerCase().includes(trimmedQuery);
+
+        if (!matchExactId && !matchIdPrefix && !matchName && !matchLead && !matchCollege && !matchUtr) {
+          return null;
+        }
+
+        let score = 0;
+        if (matchExactId) score = 100;
+        else if (matchIdPrefix) score = 80;
+        else if (matchName) score = 60;
+        else if (matchLead) score = 50;
+        else if (matchCollege) score = 40;
+        else if (matchUtr) score = 20;
+
+        return { team: t, score };
+      })
+      .filter(item => item !== null)
+      .sort((a, b) => b.score - a.score);
+
+    return scored.map(s => s.team);
+  }
+
+  // 1. Searching "005" must return LAK-005 and MUST NOT return LAK-024
+  const res005 = searchTeams(sampleTeams, '005');
+  assert.equal(res005.length, 1, 'Searching 005 must only match 1 team');
+  assert.equal(res005[0].teamId, 'LAK-005', 'Searching 005 must return LAK-005');
+
+  // 2. Searching "5" must return LAK-005
+  const res5 = searchTeams(sampleTeams, '5');
+  assert.equal(res5[0].teamId, 'LAK-005', 'Searching 5 must return LAK-005');
+
+  // 3. Searching full UTR "005978286342" (>= 5 chars) must match LAK-024
+  const resUtr = searchTeams(sampleTeams, '005978286342');
+  assert.equal(resUtr.length, 1);
+  assert.equal(resUtr[0].teamId, 'LAK-024', 'Full UTR search must match LAK-024');
+});
+
+
 
 
 
