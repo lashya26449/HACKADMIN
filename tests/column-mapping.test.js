@@ -1078,6 +1078,23 @@ test('28. Print Desk: column selection, auto orientation, presets, and role perm
   assert.deepEqual(toggleColumn(initial, 'sno'), initial, 'sno must remain locked');
   assert.deepEqual(toggleColumn(initial, 'leaderPhone'), ['sno', 'teamId', 'teamName', 'leaderPhone']);
   assert.deepEqual(toggleColumn(['sno', 'teamId', 'leaderPhone'], 'leaderPhone'), ['sno', 'teamId']);
+
+  // 4. Default department and timestamp format
+  const defaultSubtitle = 'SJBIT, Bengaluru • Department of Information Science & Engineering';
+  assert.ok(defaultSubtitle.includes('Information Science & Engineering'), 'Must be Information Science (ISE)');
+  assert.ok(!defaultSubtitle.includes('Computer Science'), 'Computer Science must not be in subtitle');
+
+  const testDate = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(new Date('2026-10-20T15:00:00Z'));
+  assert.ok(!testDate.includes('IST'), 'Timestamp must not include trailing IST string');
 });
 
 

@@ -236,13 +236,11 @@ export const ALL_PRINT_COLUMNS: ColumnDefinition[] = [
   {
     id: 'signatureBox',
     label: 'Desk Verification / Signature Box',
-    shortLabel: 'Desk Sign / Check',
+    shortLabel: 'Signature / Remarks',
     sheetCol: 'Manual Desk',
     align: 'center',
     render: () => (
-      <div className="h-7 w-20 border border-neutral-400 border-dashed rounded-sm mx-auto flex items-center justify-center text-[10px] text-neutral-400">
-        [ &nbsp; &nbsp; &nbsp; ]
-      </div>
+      <div className="h-8 min-w-[70px]" />
     ),
     exportValue: () => '',
   },
@@ -312,6 +310,10 @@ export default function PrintPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isColumnPanelOpen, setIsColumnPanelOpen] = useState(true);
 
+  // Document Header Title & Subtitle (Manually Editable)
+  const [documentTitle, setDocumentTitle] = useState('LAKSHYA 2026 — Official Registration & Desk Ledger');
+  const [documentSubtitle, setDocumentSubtitle] = useState('SJBIT, Bengaluru • Department of Information Science & Engineering');
+
   // Live print date and time
   const [printDate, setPrintDate] = useState<string>('');
   useEffect(() => {
@@ -327,7 +329,7 @@ export default function PrintPage() {
           minute: '2-digit',
           second: '2-digit',
           hour12: true,
-        }).format(now) + ' IST'
+        }).format(now)
       );
     };
     updateDateTime();
@@ -810,18 +812,27 @@ export default function PrintPage() {
       <div className="print-area bg-white text-black p-4 md:p-6 rounded-lg shadow-sm border border-neutral-300 print:border-none print:shadow-none print:p-0">
         {/* Printable Official Document Header */}
         <div className="border-b-2 border-black pb-3 mb-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg md:text-xl font-bold uppercase tracking-tight text-black">
-                LAKSHYA 2026 — Official Registration & Desk Ledger
-              </h2>
-              <p className="text-xs text-neutral-600 mt-0.5">
-                SJBIT, Bengaluru &bull; Department of Computer Science & Engineering
-              </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={documentTitle}
+                onChange={e => setDocumentTitle(e.target.value)}
+                placeholder="Enter Document Heading..."
+                className="w-full font-bold uppercase tracking-tight text-lg md:text-xl text-black bg-transparent border-b border-dashed border-neutral-300 hover:border-neutral-500 focus:border-black focus:outline-none transition-colors py-0.5 print:border-none print:p-0"
+                title="Click to edit document heading"
+              />
+              <input
+                type="text"
+                value={documentSubtitle}
+                onChange={e => setDocumentSubtitle(e.target.value)}
+                placeholder="Enter Subtitle..."
+                className="w-full text-xs text-neutral-600 bg-transparent border-b border-dashed border-neutral-200 hover:border-neutral-400 focus:border-black focus:outline-none transition-colors py-0.5 mt-0.5 print:border-none print:p-0"
+                title="Click to edit document subtitle"
+              />
             </div>
-            <div className="text-right text-[11px] text-neutral-600">
-              <p className="font-semibold text-black">Printed: {printDate}</p>
-              <p>Filter: {attendanceFilter.toUpperCase()} TEAMS ({processedTeams.length} Total)</p>
+            <div className="text-right text-[11px] text-neutral-600 shrink-0">
+              <p className="font-semibold text-black whitespace-nowrap">Printed: {printDate}</p>
             </div>
           </div>
         </div>
