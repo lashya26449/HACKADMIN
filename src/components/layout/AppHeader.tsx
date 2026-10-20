@@ -35,7 +35,7 @@ export function AppHeader() {
   const presentTeams = teams.filter(t => t.isPresent).length;
   const presentPercent = totalTeams > 0 ? Math.round((presentTeams / totalTeams) * 100) : 0;
 
-  // Live IST Date & Time combined (Asia/Kolkata)
+  // Live Date & Time combined (Asia/Kolkata) without trailing IST
   const [istDateTime, setIstDateTime] = useState<string>('');
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function AppHeader() {
         second: '2-digit',
         hour12: false,
       };
-      setIstDateTime(new Intl.DateTimeFormat('en-IN', options).format(now) + ' IST');
+      setIstDateTime(new Intl.DateTimeFormat('en-IN', options).format(now));
     };
 
     updateDateTime();
@@ -165,6 +165,19 @@ export function AppHeader() {
             Check-in
           </Link>
         )}
+        {hasPermission(role, 'canPrint') && (
+          <Link
+            href="/admin/print"
+            className={cn(
+              "px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium",
+              pathname.startsWith('/admin/print')
+                ? "bg-gradient-to-b from-white/[0.16] to-white/[0.04] text-white font-semibold border border-white/20 border-t-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),0_0_16px_rgba(16,185,129,0.18)]"
+                : "text-[#888888] hover:text-[#F0F0F0] hover:bg-white/[0.06]"
+            )}
+          >
+            Print
+          </Link>
+        )}
         {hasPermission(role, 'canViewPayments') && (
           <Link
             href="/admin/payments"
@@ -246,10 +259,10 @@ export function AppHeader() {
           </div>
         )}
 
-        {/* Live IST Clock */}
+        {/* Live Clock & Date */}
         {istDateTime && (
-          <div className="hidden xl:flex items-center gap-1.5 text-xs text-[#B5B5B5] font-mono rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 shadow-sm">
-            <Clock className="h-3.5 w-3.5 text-emerald-400" />
+          <div className="hidden xl:flex items-center gap-1.5 text-xs text-[#B5B5B5] font-mono rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 shadow-sm shrink-0 whitespace-nowrap">
+            <Clock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
             <span>{istDateTime}</span>
           </div>
         )}
@@ -257,7 +270,7 @@ export function AppHeader() {
         {/* Browser Network Status (Online / Offline) with pulsing dot */}
         <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all',
+            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all shrink-0 whitespace-nowrap',
             isOnline
               ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
               : 'border-red-500/30 bg-red-950/40 text-red-300 shadow-[0_0_14px_rgba(239,68,68,0.18)]'
@@ -283,7 +296,7 @@ export function AppHeader() {
         {/* Google Sheets API Connectivity Status */}
         <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all',
+            'flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all shrink-0 whitespace-nowrap',
             sheetsConnected
               ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
               : 'border-red-500/30 bg-red-950/40 text-red-300 shadow-[0_0_14px_rgba(239,68,68,0.18)]'
@@ -291,11 +304,11 @@ export function AppHeader() {
           title={sheetsConnected ? 'Google Sheets API connected and synchronized' : 'Google Sheets API disconnected'}
         >
           {sheetsConnected ? (
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           ) : (
-            <AlertCircle className="h-3.5 w-3.5 text-red-400" />
+            <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
           )}
-          <span className="hidden md:inline text-[11px]">
+          <span className="hidden xl:inline text-[11px]">
             {sheetsConnected ? 'Sheets Connected' : 'Sheets Disconnected'}
           </span>
         </div>
@@ -306,7 +319,7 @@ export function AppHeader() {
           size="sm"
           onClick={() => syncNow()}
           disabled={syncInProgress || !isOnline}
-          className="h-8 px-2.5 text-xs border-white/10 hover:border-emerald-500/40 bg-white/[0.045] hover:bg-emerald-950/20 text-[#F0F0F0] hover:text-emerald-300 transition-all shadow-sm"
+          className="h-8 px-2.5 text-xs border-white/10 hover:border-emerald-500/40 bg-white/[0.045] hover:bg-emerald-950/20 text-[#F0F0F0] hover:text-emerald-300 transition-all shadow-sm shrink-0"
           title="Refresh registration and attendance data from Google Sheets (Alt + R)"
         >
           <RefreshCw className={cn('h-3.5 w-3.5', syncInProgress && 'animate-spin text-emerald-400')} />
@@ -318,7 +331,7 @@ export function AppHeader() {
           variant="outline"
           size="sm"
           onClick={() => setHeaderHelpOpen(true)}
-          className="h-8 px-2 text-xs border-white/10 hover:border-white/25 bg-white/[0.045] hover:bg-white/[0.09] text-[#808080] hover:text-[#F0F0F0] transition-all"
+          className="h-8 px-2 text-xs border-white/10 hover:border-white/25 bg-white/[0.045] hover:bg-white/[0.09] text-[#808080] hover:text-[#F0F0F0] transition-all shrink-0"
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts reference"
         >
@@ -326,7 +339,7 @@ export function AppHeader() {
         </Button>
 
         {/* User Email & Sign Out Dropdown Menu */}
-        <div className="relative pl-2 border-l border-white/10" ref={dropdownRef}>
+        <div className="relative pl-2 border-l border-white/10 shrink-0" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen(prev => !prev)}
@@ -343,20 +356,20 @@ export function AppHeader() {
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500/25 via-slate-800 to-cyan-500/25 text-xs font-bold text-white shadow-[0_0_10px_rgba(16,185,129,0.25)]">
               {user?.email ? user.email[0].toUpperCase() : 'A'}
             </div>
-            <span className="text-xs font-medium max-w-[140px] sm:max-w-[200px] md:max-w-[260px] truncate leading-tight">
+            <span className="text-xs font-medium max-w-[110px] sm:max-w-[150px] md:max-w-[180px] truncate leading-tight">
               {user?.email || 'admin@hackadmin.dev'}
             </span>
             <ChevronDown
               className={cn(
-                "h-3.5 w-3.5 text-[#888888] transition-transform duration-200",
+                "h-3.5 w-3.5 text-[#888888] transition-transform duration-200 shrink-0",
                 dropdownOpen && "rotate-180 text-white"
               )}
             />
           </button>
 
-          {/* Floating Dropdown Menu */}
+          {/* Floating Dropdown Menu - Smooth pop animation anchored top-right without glitching */}
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/15 bg-[#0C0C0C]/95 backdrop-blur-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(16,185,129,0.12)] z-[100] animate-in fade-in-0 zoom-in-95">
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/15 bg-[#0C0C0C]/98 backdrop-blur-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(16,185,129,0.12)] z-[100] animate-dropdown">
               <div className="px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/5 mb-1">
                 <p className="text-[10px] font-mono text-[#808080] uppercase tracking-wider">Signed in as</p>
                 <p className="text-xs font-semibold text-[#F0F0F0] truncate mt-0.5" title={user?.email || 'admin@hackadmin.dev'}>
