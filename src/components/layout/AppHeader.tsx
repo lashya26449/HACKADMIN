@@ -17,6 +17,7 @@ import { hasPermission } from '@/lib/firebase/auth-helpers';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/check-in': 'Attendance Management',
+  '/admin/print': 'Print Desk & Ledger',
   '/admin/payments': 'Payments & Verification',
   '/admin/directory': 'Registration Directory',
   '/admin/dashboard': 'Registration Directory',

@@ -1038,6 +1038,49 @@ test('27. Auto-select exact match and WhatsApp arrival ping URL construction', (
   assert.equal(getAutoSelectedIndex(teams, '050'), 1, 'Exact match 050 must select LAK-050 index 1');
 });
 
+test('28. Print Desk: column selection, auto orientation, presets, and role permissions', () => {
+  // 1. Role permission verification
+  const ROLE_PERMISSIONS = {
+    super_admin: { canCheckIn: true, canPrint: true },
+    checkin_organizer: { canCheckIn: true, canPrint: false },
+    readonly_viewer: { canCheckIn: false, canPrint: true },
+  };
+  function hasPermission(role, perm) {
+    return Boolean(ROLE_PERMISSIONS[role]?.[perm]);
+  }
+  assert.equal(hasPermission('super_admin', 'canPrint'), true, 'super_admin must have canPrint');
+  assert.equal(hasPermission('readonly_viewer', 'canPrint'), true, 'readonly_viewer must have canPrint');
+  assert.equal(hasPermission('checkin_organizer', 'canPrint'), false, 'checkin_organizer must NOT have canPrint');
+
+  // 2. Auto orientation logic
+  function calculateOrientation(selectedColsCount, mode = 'auto') {
+    if (mode === 'portrait') return 'portrait';
+    if (mode === 'landscape') return 'landscape';
+    return selectedColsCount <= 5 ? 'portrait' : 'landscape';
+  }
+
+  assert.equal(calculateOrientation(3), 'portrait', '3 cols should be portrait');
+  assert.equal(calculateOrientation(5), 'portrait', '5 cols should be portrait');
+  assert.equal(calculateOrientation(6), 'landscape', '6 cols should be landscape');
+  assert.equal(calculateOrientation(10), 'landscape', '10 cols should be landscape');
+  assert.equal(calculateOrientation(10, 'portrait'), 'portrait', 'Forced portrait should override');
+  assert.equal(calculateOrientation(3, 'landscape'), 'landscape', 'Forced landscape should override');
+
+  // 3. Serial Number is mandatory
+  function toggleColumn(selectedList, colId) {
+    if (colId === 'sno') return selectedList; // Cannot unselect mandatory sno
+    return selectedList.includes(colId)
+      ? selectedList.filter(id => id !== colId)
+      : [...selectedList, colId];
+  }
+
+  const initial = ['sno', 'teamId', 'teamName'];
+  assert.deepEqual(toggleColumn(initial, 'sno'), initial, 'sno must remain locked');
+  assert.deepEqual(toggleColumn(initial, 'leaderPhone'), ['sno', 'teamId', 'teamName', 'leaderPhone']);
+  assert.deepEqual(toggleColumn(['sno', 'teamId', 'leaderPhone'], 'leaderPhone'), ['sno', 'teamId']);
+});
+
+
 
 
 

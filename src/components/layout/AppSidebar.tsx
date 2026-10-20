@@ -2,11 +2,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Users, FileText, CreditCard, Activity, LogOut, Menu, X, Shield } from 'lucide-react';
+import { Users, FileText, CreditCard, Activity, LogOut, Menu, X, Shield, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { hasPermission, Permission } from '@/lib/firebase/auth-helpers';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -36,38 +37,58 @@ export function AppSidebar() {
     }
   };
 
-  const navItems = [
+  const navItems: Array<{
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    description: string;
+    permission?: Permission;
+  }> = [
     {
       href: '/admin/check-in',
       label: 'Attendance Check-in',
       icon: Users,
       description: 'Mark team attendance',
+      permission: 'canCheckIn',
+    },
+    {
+      href: '/admin/print',
+      label: 'Print Ledger',
+      icon: Printer,
+      description: 'Custom printable spreadsheets',
+      permission: 'canPrint',
     },
     {
       href: '/admin/payments',
       label: 'Payments & UTR',
       icon: CreditCard,
       description: 'UTR and payment proof',
+      permission: 'canViewPayments',
     },
     {
       href: '/admin/directory',
       label: 'Registration Directory',
       icon: FileText,
       description: 'Participant registry',
+      permission: 'canViewDirectory',
     },
     {
       href: '/admin/id-cards',
       label: 'College ID Cards',
       icon: Shield,
       description: 'Verify uploaded IDs',
+      permission: 'canViewIdCards',
     },
     {
       href: '/admin/activity',
       label: 'Governance & Audit',
       icon: Activity,
       description: 'Audit trail and verification',
+      permission: 'canViewAudit',
     },
   ];
+
+  const visibleNavItems = navItems.filter(item => !item.permission || hasPermission(role, item.permission));
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col bg-[#101010] text-[#F0F0F0] border-r border-white/10">
@@ -91,7 +112,7 @@ export function AppSidebar() {
             Workspace
           </p>
         </div>
-        {navItems.map(item => {
+        {visibleNavItems.map(item => {
           const active = pathname === item.href || (item.href !== '/admin/check-in' && pathname.startsWith(item.href + '/'));
           return (
             <Link
