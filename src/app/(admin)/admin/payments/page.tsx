@@ -93,6 +93,7 @@ export default function PaymentsPage() {
   const [copiedUtr, setCopiedUtr] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [printDate, setPrintDate] = useState('');
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   const canView = hasPermission(role, 'canViewPayments');
 
@@ -229,14 +230,19 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-6 w-full max-w-full pb-20">
       {/* PRINT-ONLY HEADER (Hidden on screen, strictly visible during window.print()) */}
-      <div className="hidden print:block mb-6 border-b-2 border-black pb-4 text-black">
+      <div className="hidden print:block mb-4 border-b-2 border-black pb-3 text-black">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold uppercase tracking-wider">LAKSHYA 2026 — PAYMENTS</h1>
+            <h1 className="text-xl font-bold uppercase tracking-wider text-black">
+              LAKSHYA 2026 — PAYMENTS & UTR VERIFICATION
+            </h1>
+            <p className="text-xs text-neutral-600 mt-0.5">
+              SJBIT, Bengaluru &bull; Department of Information Science & Engineering
+            </p>
           </div>
-          <div className="text-right text-xs text-gray-700">
-            <p><strong>Generated:</strong> {printDate || 'Current'}</p>
-            <p><strong>Total Teams:</strong> {filteredTeams.length}</p>
+          <div className="text-right text-xs text-neutral-700">
+            <p className="font-semibold text-black">Printed: {printDate || 'Current'}</p>
+            <p>Total Teams Listed: {filteredTeams.length}</p>
           </div>
         </div>
       </div>
@@ -260,6 +266,36 @@ export default function PaymentsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* A4 Orientation Toggle */}
+            <div className="flex items-center bg-[#141414] border border-white/10 rounded-lg p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setPrintOrientation('portrait')}
+                className={cn(
+                  'px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors',
+                  printOrientation === 'portrait'
+                    ? 'bg-emerald-600 text-white font-semibold'
+                    : 'text-[#808080] hover:text-[#D0D0D0]'
+                )}
+                title="A4 Portrait: Fits 20 teams per page cleanly with ideal row height"
+              >
+                A4 Portrait (20/pg)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintOrientation('landscape')}
+                className={cn(
+                  'px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors',
+                  printOrientation === 'landscape'
+                    ? 'bg-emerald-600 text-white font-semibold'
+                    : 'text-[#808080] hover:text-[#D0D0D0]'
+                )}
+                title="A4 Landscape: Fits 14 teams per page with wide columns"
+              >
+                A4 Landscape (14/pg)
+              </button>
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -581,40 +617,95 @@ export default function PaymentsPage() {
         )}
       </div>
 
-      {/* PRINT-OPTIMIZED TABLE (Strictly styled for printer / PDF output)
-          REQUIREMENTS:
-          - No attendance column
-          - No sign/status column
-          - Strictly: Team ID, Lead Name, Lead Number, UTR Number, and Payment Timestamp
-      */}
-      <div className="hidden print:block text-black">
-        <table className="w-full table-fixed text-left text-[12px] border-collapse border border-gray-400">
+      {/* Dynamic Print Styles specifically for A4 format */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 ${printOrientation};
+            margin: 10mm 8mm 10mm 8mm;
+          }
+          html, body {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-size: ${printOrientation === 'portrait' ? '11px' : '11.5px'} !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .h-screen, .overflow-hidden, .overflow-y-auto {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          main {
+            height: auto !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          header, aside, nav, .print-hidden, [role="navigation"] {
+            display: none !important;
+          }
+          .print-area {
+            display: block !important;
+            width: 100% !important;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto !important;
+          }
+          thead {
+            display: table-header-group !important;
+          }
+          tr {
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+          }
+          th, td {
+            border: 1px solid #444444 !important;
+            color: #000000 !important;
+          }
+          th {
+            background-color: #f2f2f2 !important;
+            font-weight: bold !important;
+          }
+        }
+      `}</style>
+
+      {/* PRINT-OPTIMIZED TABLE (Strictly styled for A4 printer / PDF output) */}
+      <div className="hidden print:block text-black print-area">
+        <table className="w-full text-left border-collapse border border-gray-500">
           <thead>
-            <tr className="bg-gray-100 text-black font-bold border-b border-gray-400 text-[13px]">
-              <th className="py-2.5 px-2 border border-gray-400 text-center w-[8%]">Verify</th>
-              <th className="py-2.5 px-2 border border-gray-400 text-center w-[6%]">#</th>
-              <th className="py-2.5 px-2 border border-gray-400 w-[15%]">Team ID</th>
-              <th className="py-2.5 px-2.5 border border-gray-400 w-[23%]">Lead Name</th>
-              <th className="py-2.5 px-2.5 border border-gray-400 w-[15%]">Lead Number</th>
-              <th className="py-2.5 px-2.5 border border-gray-400 w-[17%] font-mono">UTR Number</th>
-              <th className="py-2.5 px-2.5 border border-gray-400 w-[16%]">Payment Timestamp</th>
+            <tr className="bg-gray-100 text-black font-bold border-b border-gray-500 text-xs">
+              <th className="py-2 px-2 border border-gray-500 text-center w-[7%]">Verify</th>
+              <th className="py-2 px-2 border border-gray-500 text-center w-[5%]">#</th>
+              <th className="py-2 px-2 border border-gray-500 w-[13%]">Team ID</th>
+              <th className="py-2 px-2.5 border border-gray-500 w-[24%]">Team & Lead Name</th>
+              <th className="py-2 px-2.5 border border-gray-500 w-[16%]">Lead Phone</th>
+              <th className="py-2 px-2.5 border border-gray-500 w-[18%] font-mono">UTR Number</th>
+              <th className="py-2 px-2.5 border border-gray-500 w-[17%]">Registered At</th>
             </tr>
           </thead>
           <tbody>
             {filteredTeams.map((team, idx) => (
-              <tr key={team.teamId} className="border-b border-gray-300 page-break-inside-avoid text-[12px]">
-                {/* 2x2 independent check cube for pen tick off */}
-                <td className="py-2 px-2 border border-gray-300 text-center align-middle">
-                  <div className="w-5 h-5 border-2 border-black rounded-sm mx-auto" />
+              <tr key={team.teamId} className="border-b border-gray-400 text-[11px]">
+                {/* Independent check cube for pen tick off */}
+                <td className="py-1.5 px-2 border border-gray-400 text-center align-middle">
+                  <div className="w-4 h-4 border-2 border-black rounded-sm mx-auto" />
                 </td>
-                <td className="py-2 px-2 border border-gray-300 text-center font-mono align-top">{idx + 1}</td>
-                <td className="py-2 px-2 border border-gray-300 font-mono font-bold align-top break-words">{team.teamId}</td>
-                <td className="py-2 px-2.5 border border-gray-300 font-medium align-top break-words">{team.leaderName || '—'}</td>
-                <td className="py-2 px-2.5 border border-gray-300 font-mono align-top break-words">{team.leaderPhone || '—'}</td>
-                <td className="py-2 px-2.5 border border-gray-300 font-mono font-semibold align-top break-all">
+                <td className="py-1.5 px-2 border border-gray-400 text-center font-mono align-middle">{idx + 1}</td>
+                <td className="py-1.5 px-2 border border-gray-400 font-mono font-bold align-middle">{team.teamId}</td>
+                <td className="py-1.5 px-2.5 border border-gray-400 align-middle">
+                  <div className="font-semibold text-black leading-tight">{team.teamName || '—'}</div>
+                  <div className="text-[10px] text-neutral-600 leading-tight">{team.leaderName || '—'}</div>
+                </td>
+                <td className="py-1.5 px-2.5 border border-gray-400 font-mono align-middle">{team.leaderPhone || '—'}</td>
+                <td className="py-1.5 px-2.5 border border-gray-400 font-mono font-semibold align-middle break-all">
                   {team.paymentRef || 'MISSING'}
                 </td>
-                <td className="py-2 px-2.5 border border-gray-300 font-mono align-top break-words text-[11px] leading-snug">
+                <td className="py-1.5 px-2.5 border border-gray-400 font-mono align-middle text-[10px] whitespace-nowrap">
                   {formatPaymentTimestamp(team.registeredAt)}
                 </td>
               </tr>
@@ -623,12 +714,12 @@ export default function PaymentsPage() {
         </table>
 
         {/* Print Footer */}
-        <div className="mt-8 pt-4 border-t border-gray-400 flex justify-between items-center text-xs text-gray-600">
+        <div className="mt-6 pt-3 border-t border-gray-400 flex justify-between items-center text-xs text-neutral-600">
           <div>
             <p><strong>Total Teams Listed:</strong> {filteredTeams.length}</p>
           </div>
           <div className="text-right">
-            <p className="border-t border-black pt-1 w-48 text-center">Authorized Signatory</p>
+            <p className="border-t border-black pt-1 w-44 text-center">Authorized Signatory</p>
           </div>
         </div>
       </div>

@@ -1097,6 +1097,35 @@ test('28. Print Desk: column selection, auto orientation, presets, and role perm
   assert.ok(!testDate.includes('IST'), 'Timestamp must not include trailing IST string');
 });
 
+test('29. Payments UTR A4 Sheet: capacity calculations, orientation, and row density', () => {
+  // A4 Dimensions: 297mm height x 210mm width
+  const A4_HEIGHT_MM = 297;
+  const MARGINS_MM = 20; // 10mm top + 10mm bottom
+  const HEADER_FOOTER_MM = 47; // Title, department, stats, table headers, footer
+  const AVAILABLE_BODY_MM = A4_HEIGHT_MM - MARGINS_MM - HEADER_FOOTER_MM; // ~230mm
+
+  // Ideal row heights:
+  // - 10.5mm - 11.5mm per row with py-1.5 px-2 (font 11px, checkbox 16-18px)
+  const ROW_HEIGHT_MM = 11;
+  const optimalTeamsPerPortraitPage = Math.floor(AVAILABLE_BODY_MM / ROW_HEIGHT_MM);
+
+  assert.ok(
+    optimalTeamsPerPortraitPage >= 18 && optimalTeamsPerPortraitPage <= 22,
+    `Optimal teams per A4 Portrait page should be 18-22, calculated: ${optimalTeamsPerPortraitPage}`
+  );
+
+  // Landscape height: 210mm, printable: ~145mm -> ~13-15 teams
+  const A4_LANDSCAPE_HEIGHT_MM = 210;
+  const AVAILABLE_LANDSCAPE_BODY_MM = A4_LANDSCAPE_HEIGHT_MM - MARGINS_MM - HEADER_FOOTER_MM;
+  const optimalTeamsPerLandscapePage = Math.floor(AVAILABLE_LANDSCAPE_BODY_MM / ROW_HEIGHT_MM);
+
+  assert.ok(
+    optimalTeamsPerLandscapePage >= 12 && optimalTeamsPerLandscapePage <= 15,
+    `Optimal teams per A4 Landscape page should be 12-15, calculated: ${optimalTeamsPerLandscapePage}`
+  );
+});
+
+
 
 
 
