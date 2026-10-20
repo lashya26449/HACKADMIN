@@ -14,6 +14,7 @@ import { useTeams } from '@/contexts/TeamsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type PaymentFilter = 'all' | 'utr_submitted' | 'utr_missing' | 'has_proof' | 'present';
 
