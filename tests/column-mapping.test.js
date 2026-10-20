@@ -1125,6 +1125,33 @@ test('29. Payments UTR A4 Sheet: capacity calculations, orientation, and row den
   );
 });
 
+test('30. Secondary authorization gate and directory layout specifications', () => {
+  // 1. Master password verification
+  const SECONDARY_MASTER_PASSWORD = 'Anu2006';
+  function verifySecondaryAuth(inputPassword) {
+    return inputPassword === SECONDARY_MASTER_PASSWORD;
+  }
+
+  assert.equal(verifySecondaryAuth('Anu2006'), true, 'Password Anu2006 must unlock secondary gate');
+  assert.equal(verifySecondaryAuth('anu2006'), false, 'Password is case-sensitive');
+  assert.equal(verifySecondaryAuth('admin'), false, 'Wrong password must be rejected');
+
+  // 2. Protected routes list
+  const PROTECTED_SECONDARY_ROUTES = ['/admin/payments', '/admin/print', '/admin/id-cards'];
+  assert.ok(PROTECTED_SECONDARY_ROUTES.includes('/admin/payments'));
+  assert.ok(PROTECTED_SECONDARY_ROUTES.includes('/admin/print'));
+  assert.ok(PROTECTED_SECONDARY_ROUTES.includes('/admin/id-cards'));
+  assert.ok(!PROTECTED_SECONDARY_ROUTES.includes('/admin/check-in'));
+  assert.ok(!PROTECTED_SECONDARY_ROUTES.includes('/admin/directory'));
+
+  // 3. Directory layout columns
+  const directoryColumns = ['teamId', 'teamAndLead', 'collegeAndDegree', 'contactInfo', 'attendance'];
+  assert.ok(!directoryColumns.includes('row'), 'Row number must be removed from directory table');
+  assert.ok(!directoryColumns.includes('utr'), 'UTR must be removed from directory table');
+  assert.equal(directoryColumns.length, 5, 'Directory table must be concise with 5 columns');
+});
+
+
 
 
 

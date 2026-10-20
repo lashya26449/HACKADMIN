@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, extractDriveFileId } from '@/lib/utils';
 import { toast } from 'sonner';
+import { SecondaryAuthGate } from '@/components/auth/SecondaryAuthGate';
 
 export default function IdCardsPage() {
   const router = useRouter();
@@ -63,7 +64,8 @@ export default function IdCardsPage() {
   }, [filteredTeams]);
 
   return (
-    <div className="space-y-5 max-w-full mx-auto pb-16">
+    <SecondaryAuthGate pageTitle="College ID Cards">
+      <div className="space-y-5 max-w-full mx-auto pb-16">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -226,5 +228,6 @@ export default function IdCardsPage() {
         </CardContent>
       </div>
     </div>
+    </SecondaryAuthGate>
   );
 }
