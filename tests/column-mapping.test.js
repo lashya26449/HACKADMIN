@@ -1125,26 +1125,20 @@ test('29. Payments UTR A4 Sheet: capacity calculations, orientation, and row den
   );
 });
 
-test('30. Secondary authorization gate and directory layout specifications', () => {
-  // 1. Master password verification
-  const SECONDARY_MASTER_PASSWORD = 'Anu2006';
-  function verifySecondaryAuth(inputPassword) {
-    return inputPassword === SECONDARY_MASTER_PASSWORD;
+test('30. Directory layout specifications and direct role access', () => {
+  // 1. Direct role access: super_admin has access to payments, print, and id-cards directly
+  const ROLE_PERMISSIONS = {
+    super_admin: { canViewPayments: true, canPrint: true, canViewIdCards: true },
+    checkin_organizer: { canViewPayments: false, canPrint: false, canViewIdCards: false },
+  };
+  function hasPermission(role, perm) {
+    return Boolean(ROLE_PERMISSIONS[role]?.[perm]);
   }
+  assert.equal(hasPermission('super_admin', 'canViewPayments'), true);
+  assert.equal(hasPermission('super_admin', 'canPrint'), true);
+  assert.equal(hasPermission('super_admin', 'canViewIdCards'), true);
 
-  assert.equal(verifySecondaryAuth('Anu2006'), true, 'Password Anu2006 must unlock secondary gate');
-  assert.equal(verifySecondaryAuth('anu2006'), false, 'Password is case-sensitive');
-  assert.equal(verifySecondaryAuth('admin'), false, 'Wrong password must be rejected');
-
-  // 2. Protected routes list
-  const PROTECTED_SECONDARY_ROUTES = ['/admin/payments', '/admin/print', '/admin/id-cards'];
-  assert.ok(PROTECTED_SECONDARY_ROUTES.includes('/admin/payments'));
-  assert.ok(PROTECTED_SECONDARY_ROUTES.includes('/admin/print'));
-  assert.ok(PROTECTED_SECONDARY_ROUTES.includes('/admin/id-cards'));
-  assert.ok(!PROTECTED_SECONDARY_ROUTES.includes('/admin/check-in'));
-  assert.ok(!PROTECTED_SECONDARY_ROUTES.includes('/admin/directory'));
-
-  // 3. Directory layout columns
+  // 2. Directory layout columns: Row and UTR removed, 5 concise columns retained
   const directoryColumns = ['teamId', 'teamAndLead', 'collegeAndDegree', 'contactInfo', 'attendance'];
   assert.ok(!directoryColumns.includes('row'), 'Row number must be removed from directory table');
   assert.ok(!directoryColumns.includes('utr'), 'UTR must be removed from directory table');

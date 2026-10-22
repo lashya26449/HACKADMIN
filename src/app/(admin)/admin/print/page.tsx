@@ -15,7 +15,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { cn } from '@/lib/utils';
 import type { Team } from '@/types';
-import { SecondaryAuthGate } from '@/components/auth/SecondaryAuthGate';
 
 export interface ColumnDefinition {
   id: string;
@@ -473,8 +472,7 @@ export default function PrintPage() {
   }
 
   return (
-    <SecondaryAuthGate pageTitle="Print Desk & Ledger">
-      <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20">
       {/* Dynamic Print CSS Setup */}
       <style jsx global>{`
         @media print {
@@ -900,6 +898,5 @@ export default function PrintPage() {
         </div>
       </div>
     </div>
-    </SecondaryAuthGate>
   );
 }

@@ -15,7 +15,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { SecondaryAuthGate } from '@/components/auth/SecondaryAuthGate';
 
 type PaymentFilter = 'all' | 'utr_submitted' | 'utr_missing' | 'has_proof' | 'present';
 
@@ -230,8 +229,7 @@ export default function PaymentsPage() {
   };
 
   return (
-    <SecondaryAuthGate pageTitle="Payments & UTR Verification">
-      <div className="space-y-6 w-full max-w-full pb-20">
+    <div className="space-y-6 w-full max-w-full pb-20">
       {/* PRINT-ONLY HEADER (Hidden on screen, strictly visible during window.print()) */}
       <div className="hidden print:block mb-4 border-b-2 border-black pb-3 text-black">
         <div className="flex justify-between items-start">
@@ -727,6 +725,5 @@ export default function PaymentsPage() {
         </div>
       </div>
     </div>
-    </SecondaryAuthGate>
   );
 }
