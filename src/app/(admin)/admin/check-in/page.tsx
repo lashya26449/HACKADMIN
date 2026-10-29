@@ -33,7 +33,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail, MessageSquare,
-  Undo2, Clock, AlertTriangle, Smartphone, ExternalLink
+  Undo2, Clock, AlertTriangle, Smartphone, ExternalLink, Zap
 } from 'lucide-react';
 import { sound } from '@/lib/audio';
 
@@ -69,8 +69,8 @@ export default function CheckInPage() {
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  // WhatsApp delivery mode ('web' popup vs 'desktop' native app)
-  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('web');
+  // WhatsApp delivery mode ('desktop' native app vs 'web' popup). Defaults to desktop for zero reloads / no "Use Here".
+  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('desktop');
 
   // Load settings on mount
   useEffect(() => {
@@ -95,49 +95,47 @@ export default function CheckInPage() {
   };
 
   const handleToggleMode = () => {
-    const nextMode: WhatsAppMode = whatsappMode === 'web' ? 'desktop' : 'web';
+    const nextMode: WhatsAppMode = whatsappMode === 'desktop' ? 'web' : 'desktop';
     setWhatsappModeState(nextMode);
     setWhatsAppMode(nextMode);
     toast.info(
       nextMode === 'desktop'
-        ? 'Switched to Native WhatsApp Desktop App (No "Use Here" prompt)'
+        ? 'Switched to Native WhatsApp Desktop App (No new windows, no "Use Here")'
         : 'Switched to WhatsApp Web (Single browser popup)'
     );
   };
 
   const handleTestWhatsAppWindow = () => {
-    if (whatsappMode === 'desktop') {
-      window.location.href = 'whatsapp://';
-      toast.success(
-        <div className="flex flex-col gap-1">
-          <div className="font-semibold text-white">WhatsApp Desktop App Triggered</div>
-          <div className="text-[11px] text-cyan-300">
-            Native app opens directly without any browser reload or &quot;Use Here&quot; prompt!
-          </div>
-        </div>
-      );
-      return;
-    }
+    const sampleTeam = teams.find(t => t.leaderPhone) || {
+      teamId: 'LAK-001',
+      teamName: 'Byte Busters',
+      leaderName: 'Aarav Sharma',
+      leaderPhone: '9876543210',
+    };
+    const phone = normalizeIndianPhone(sampleTeam.leaderPhone) || '919876543210';
+    const msg = buildCheckInMessage({
+      leadName: sampleTeam.leaderName,
+      teamName: sampleTeam.teamName,
+      teamId: sampleTeam.teamId,
+    });
 
-    const win = openWhatsAppWindow();
-    if (win) {
-      try {
-        win.location.href = 'https://web.whatsapp.com';
-        win.focus?.();
-      } catch {
-        window.open('https://web.whatsapp.com', 'whatsapp-web');
-      }
+    const ok = loadChat(null, phone, msg, whatsappMode);
+    if (ok) {
       toast.success(
         <div className="flex flex-col gap-1">
-          <div className="font-semibold text-white">WhatsApp Window Launched</div>
+          <div className="font-semibold text-white">
+            WhatsApp Triggered ({whatsappMode === 'desktop' ? 'Desktop App' : 'Web Popup'})
+          </div>
           <div className="text-[11px] text-emerald-300">
-            Scan the QR code once. Ensure no other web.whatsapp.com tab is open so &quot;Use Here&quot; never appears!
+            {whatsappMode === 'desktop'
+              ? 'Dispatched directly to WhatsApp Desktop app. No browser windows opened & no "Use Here" prompt!'
+              : 'Dispatched to browser WhatsApp Web popup.'}
           </div>
         </div>,
         { duration: 6000 }
       );
     } else {
-      toast.error('Popup was blocked by your browser. Please click the popup icon in your address bar and select "Always allow popups" for HackAdmin.');
+      toast.error('Failed to trigger WhatsApp. Please check popup permissions.');
     }
   };
 
@@ -802,14 +800,14 @@ export default function CheckInPage() {
           />
 
           <div className="flex items-center gap-2.5">
-            {/* Open / Test Window Pre-launch Button */}
+            {/* Test Trigger Button */}
             <button
               onClick={handleTestWhatsAppWindow}
-              title="Test or pre-open WhatsApp Web window (scan QR code once before the event starts)"
+              title="Test WhatsApp trigger immediately on a sample team (zero new windows, zero 'Use Here' in Desktop mode)"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Launch / Test Window</span>
+              <Zap className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Test Trigger</span>
             </button>
 
             {/* Delivery Mode Toggle: Web vs Desktop App */}
