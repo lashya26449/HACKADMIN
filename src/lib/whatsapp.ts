@@ -1,10 +1,30 @@
 /**
- * WhatsApp Web integration helpers for HackAdmin (LAKSHYA 2026).
- * Ensures a single persistent popup window is reused across check-ins and
- * triggers the pre-filled chat URL whenever the attendance column updates.
+ * WhatsApp integration helpers for HackAdmin (LAKSHYA 2026).
+ * Supports both WhatsApp Web popup mode and native Windows WhatsApp Desktop app mode.
+ * Eliminates "Use Here" conflicts by reusing a single session window or invoking the desktop protocol.
  */
 
 let activePopup: Window | null = null;
+
+export type WhatsAppMode = 'web' | 'desktop';
+
+/**
+ * Gets the current WhatsApp delivery mode from localStorage ('web' | 'desktop').
+ * Defaults to 'web'.
+ */
+export function getWhatsAppMode(): WhatsAppMode {
+  if (typeof window === 'undefined') return 'web';
+  return (localStorage.getItem('hackadmin_whatsapp_mode') as WhatsAppMode) || 'web';
+}
+
+/**
+ * Persists the WhatsApp delivery mode in localStorage.
+ */
+export function setWhatsAppMode(mode: WhatsAppMode): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('hackadmin_whatsapp_mode', mode);
+  }
+}
 
 /**
  * Normalizes an Indian phone number to 12 digits with the '91' country code.
@@ -51,12 +71,16 @@ export function buildCheckInMessage(params: {
 }
 
 /**
- * Synchronously opens or reuses the dedicated WhatsApp popup window.
- * MUST be invoked synchronously during a user gesture (click/Enter) before any await
- * to avoid triggering modern browser popup blockers.
+ * Synchronously opens or reuses the dedicated WhatsApp popup window (for 'web' mode).
+ * In 'desktop' mode, no browser popup is opened because native URI protocols handle it directly.
  */
 export function openWhatsAppWindow(): Window | null {
   if (typeof window === 'undefined') return null;
+  const mode = getWhatsAppMode();
+  if (mode === 'desktop') {
+    return null;
+  }
+
   try {
     if (activePopup && !activePopup.closed) {
       try {
@@ -72,12 +96,26 @@ export function openWhatsAppWindow(): Window | null {
 }
 
 /**
- * Navigates the single persistent WhatsApp popup window to the specific chat.
- * When the attendance column updates, this triggers the URL in the SAME window
- * and brings it into focus. Handles cross-origin fallback transparently.
+ * Triggers the pre-filled chat message.
+ * - In 'desktop' mode: triggers `whatsapp://send?phone=...&text=...` directly to the native app (no "Use Here", no reload).
+ * - In 'web' mode: navigates the persistent popup window to `https://web.whatsapp.com/send?phone=...&text=...`.
  */
-export function loadChat(win: Window | null, phone: string, message: string): boolean {
+export function loadChat(win: Window | null, phone: string, message: string, overrideMode?: WhatsAppMode): boolean {
   if (typeof window === 'undefined') return false;
+  const mode = overrideMode || getWhatsAppMode();
+
+  // 1. Desktop App Mode (native Windows WhatsApp app — zero "Use Here" issues)
+  if (mode === 'desktop') {
+    const desktopUri = `whatsapp://send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
+    try {
+      window.location.href = desktopUri;
+      return true;
+    } catch {
+      // Fallback to web if desktop protocol cannot be dispatched
+    }
+  }
+
+  // 2. Web Popup Mode
   const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
   const target = win || activePopup;
 
@@ -86,7 +124,6 @@ export function loadChat(win: Window | null, phone: string, message: string): bo
       try {
         target.location.href = url;
       } catch {
-        // Cross-origin boundary fallback: window.open targeting the same window name navigates it natively
         const reopened = window.open(url, 'whatsapp-web');
         if (reopened) activePopup = reopened;
       }
@@ -96,7 +133,6 @@ export function loadChat(win: Window | null, phone: string, message: string): bo
       return true;
     }
 
-    // Open/navigate in the same named window if not already active
     const newWin = window.open(url, 'whatsapp-web', 'width=520,height=720,left=900,top=80');
     if (newWin) {
       activePopup = newWin;

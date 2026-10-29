@@ -1272,6 +1272,38 @@ test('34. Attendance undo windows, keyboard shortcuts, and WhatsApp unsend warni
   assert.ok(undoWarning.includes('cannot be unsent'), 'Must warn user that sent WhatsApp messages cannot be unsent');
 });
 
+test('35. WhatsApp delivery modes: web popup vs desktop URI protocol to prevent "Use Here"', () => {
+  function getWhatsAppDispatchTarget(phone, message, mode) {
+    if (mode === 'desktop') {
+      return {
+        protocol: 'whatsapp://',
+        uri: `whatsapp://send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`,
+        requiresBrowserPopup: false,
+        avoidsUseHereDialog: true,
+      };
+    }
+    return {
+      protocol: 'https://',
+      uri: `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`,
+      requiresBrowserPopup: true,
+      targetWindow: 'whatsapp-web',
+    };
+  }
+
+  const phone = '919876543210';
+  const msg = 'Welcome to LAKSHYA 2026';
+
+  const desktop = getWhatsAppDispatchTarget(phone, msg, 'desktop');
+  assert.equal(desktop.requiresBrowserPopup, false, 'Desktop mode avoids browser popup');
+  assert.equal(desktop.avoidsUseHereDialog, true, 'Desktop mode avoids "Use Here" prompt completely');
+  assert.ok(desktop.uri.startsWith('whatsapp://send?phone=919876543210'));
+
+  const web = getWhatsAppDispatchTarget(phone, msg, 'web');
+  assert.equal(web.requiresBrowserPopup, true);
+  assert.equal(web.targetWindow, 'whatsapp-web');
+  assert.ok(web.uri.startsWith('https://web.whatsapp.com/send?phone=919876543210'));
+});
+
 
 
 

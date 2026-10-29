@@ -18,7 +18,8 @@ import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, generateIdempotencyKey } from '@/lib/utils';
 import {
   openWhatsAppWindow, loadChat, closeWhatsAppWindow,
-  normalizeIndianPhone, buildCheckInMessage
+  normalizeIndianPhone, buildCheckInMessage,
+  getWhatsAppMode, setWhatsAppMode, type WhatsAppMode
 } from '@/lib/whatsapp';
 import type { AuditEntry, Team } from '@/types';
 import {
@@ -68,13 +69,17 @@ export default function CheckInPage() {
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  // Load auto-open setting on mount
+  // WhatsApp delivery mode ('web' popup vs 'desktop' native app)
+  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('web');
+
+  // Load settings on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('hackadmin_auto_open_whatsapp');
       if (saved !== null) {
         setAutoOpenWhatsApp(saved === 'true');
       }
+      setWhatsappModeState(getWhatsAppMode());
     }
   }, []);
 
@@ -84,12 +89,36 @@ export default function CheckInPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('hackadmin_auto_open_whatsapp', String(next));
       }
-      toast.info(`Auto-open WhatsApp popup: ${next ? 'ENABLED' : 'DISABLED'}`);
+      toast.info(`Auto-trigger WhatsApp: ${next ? 'ENABLED' : 'DISABLED'}`);
       return next;
     });
   };
 
+  const handleToggleMode = () => {
+    const nextMode: WhatsAppMode = whatsappMode === 'web' ? 'desktop' : 'web';
+    setWhatsappModeState(nextMode);
+    setWhatsAppMode(nextMode);
+    toast.info(
+      nextMode === 'desktop'
+        ? 'Switched to Native WhatsApp Desktop App (No "Use Here" prompt)'
+        : 'Switched to WhatsApp Web (Single browser popup)'
+    );
+  };
+
   const handleTestWhatsAppWindow = () => {
+    if (whatsappMode === 'desktop') {
+      window.location.href = 'whatsapp://';
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <div className="font-semibold text-white">WhatsApp Desktop App Triggered</div>
+          <div className="text-[11px] text-cyan-300">
+            Native app opens directly without any browser reload or &quot;Use Here&quot; prompt!
+          </div>
+        </div>
+      );
+      return;
+    }
+
     const win = openWhatsAppWindow();
     if (win) {
       try {
@@ -102,7 +131,7 @@ export default function CheckInPage() {
         <div className="flex flex-col gap-1">
           <div className="font-semibold text-white">WhatsApp Window Launched</div>
           <div className="text-[11px] text-emerald-300">
-            Scan the QR code once to log in. This same window will stay ready and be reused for all team check-ins!
+            Scan the QR code once. Ensure no other web.whatsapp.com tab is open so &quot;Use Here&quot; never appears!
           </div>
         </div>,
         { duration: 6000 }
@@ -375,17 +404,20 @@ export default function CheckInPage() {
           ...prev.filter(t => t.teamId.toLowerCase() !== teamId.toLowerCase()),
         ].slice(0, 10));
 
-        // Populate WhatsApp Web chat in popup window
+        // Populate WhatsApp chat (Web popup or native Desktop App)
         const cleanPhone = normalizeIndianPhone(team.leaderPhone);
-        if (cleanPhone && waWindow) {
-          const waMsg = buildCheckInMessage({
-            leadName: team.leaderName,
-            teamName: team.teamName,
-            teamId: team.teamId,
-          });
-          loadChat(waWindow, cleanPhone, waMsg);
-        } else if (waWindow) {
-          closeWhatsAppWindow(waWindow);
+        if (cleanPhone) {
+          if (autoOpenWhatsApp) {
+            const waMsg = buildCheckInMessage({
+              leadName: team.leaderName,
+              teamName: team.teamName,
+              teamId: team.teamId,
+            });
+            loadChat(waWindow, cleanPhone, waMsg, whatsappMode);
+          }
+        } else {
+          if (waWindow) closeWhatsAppWindow(waWindow);
+          toast.info(`Team ${teamId} checked in without WhatsApp ping (no leader phone number on sheet).`);
         }
 
         // Show 5-second Sonner toast with Undo action
@@ -780,10 +812,29 @@ export default function CheckInPage() {
               <span className="hidden sm:inline">Launch / Test Window</span>
             </button>
 
+            {/* Delivery Mode Toggle: Web vs Desktop App */}
+            <button
+              onClick={handleToggleMode}
+              title={
+                whatsappMode === 'desktop'
+                  ? 'Desktop App active (opens native Windows app instantly with no "Use Here" prompt). Click to switch to Web popup.'
+                  : 'Web Popup active (opens browser popup window). Click to switch to Desktop app.'
+              }
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer shadow-sm active:scale-95 ${
+                whatsappMode === 'desktop'
+                  ? 'border-cyan-500/40 bg-cyan-950/20 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                  : 'border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white'
+              }`}
+            >
+              <Smartphone className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Mode:</span>
+              <span className="font-semibold">{whatsappMode === 'desktop' ? 'Desktop App' : 'Web Popup'}</span>
+            </button>
+
             {/* WhatsApp Auto-Popup Switch */}
             <button
               onClick={toggleAutoOpenWhatsApp}
-              title="Automatically open WhatsApp Web popup upon verified check-in"
+              title="Automatically trigger WhatsApp upon verified check-in"
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                 autoOpenWhatsApp
                   ? 'bg-[#25D366]/15 border-[#25D366]/40 text-[#25D366] shadow-[0_0_12px_rgba(37,211,102,0.15)]'
