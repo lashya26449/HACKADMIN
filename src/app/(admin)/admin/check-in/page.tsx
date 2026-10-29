@@ -16,6 +16,10 @@ import { ExportOptionsDialog } from '@/components/export/ExportOptionsDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, generateIdempotencyKey } from '@/lib/utils';
+import {
+  openWhatsAppWindow, loadChat, closeWhatsAppWindow,
+  normalizeIndianPhone, buildCheckInMessage
+} from '@/lib/whatsapp';
 import type { AuditEntry, Team } from '@/types';
 import {
   Dialog,
@@ -26,8 +30,19 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail, MessageSquare } from 'lucide-react';
+import {
+  CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail, MessageSquare,
+  Undo2, Clock, AlertTriangle, Smartphone
+} from 'lucide-react';
 import { sound } from '@/lib/audio';
+
+interface RecentlyMarkedTeam {
+  teamId: string;
+  teamName: string;
+  leaderName?: string;
+  leaderPhone?: string;
+  markedAt: number;
+}
 
 export default function CheckInPage() {
   const { user, role, getIdToken } = useAuth();
@@ -37,6 +52,42 @@ export default function CheckInPage() {
   const [filter, setFilter] = useState<FilterValue>('all');
   const [processingTeamId, setProcessingTeamId] = useState<string | undefined>();
   const [recentActivity, setRecentActivity] = useState<AuditEntry[]>([]);
+
+  // Auto-open WhatsApp setting (persisted in localStorage)
+  const [autoOpenWhatsApp, setAutoOpenWhatsApp] = useState<boolean>(true);
+
+  // Recently marked session list (last 10 teams)
+  const [recentlyMarked, setRecentlyMarked] = useState<RecentlyMarkedTeam[]>([]);
+  const [undoConfirmTeam, setUndoConfirmTeam] = useState<RecentlyMarkedTeam | null>(null);
+
+  // Active 5-second Undo ref for toast & Ctrl+Z
+  const activeUndoRef = useRef<{
+    teamId: string;
+    waWindow: Window | null;
+    toastId: string | number;
+    timeoutId: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  // Load auto-open setting on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hackadmin_auto_open_whatsapp');
+      if (saved !== null) {
+        setAutoOpenWhatsApp(saved === 'true');
+      }
+    }
+  }, []);
+
+  const toggleAutoOpenWhatsApp = () => {
+    setAutoOpenWhatsApp(prev => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hackadmin_auto_open_whatsapp', String(next));
+      }
+      toast.info(`Auto-open WhatsApp popup: ${next ? 'ENABLED' : 'DISABLED'}`);
+      return next;
+    });
+  };
 
   // Keyboard navigation & dialog states
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -65,11 +116,9 @@ export default function CheckInPage() {
   // Filtered registrations: local search + attendance filter tabs only
   const filteredTeams = useMemo(() => {
     return teams.filter(t => {
-      // 1. Status Filter Tab
       if (filter === 'present' && !t.isPresent) return false;
       if (filter === 'not_present' && t.isPresent) return false;
 
-      // 2. Search Bar: Team ID, Team Name, Lead Name, College
       if (trimmedSearch) {
         const matchesId = t.teamId.toLowerCase().includes(trimmedSearch);
         const matchesName = t.teamName.toLowerCase().includes(trimmedSearch);
@@ -84,7 +133,7 @@ export default function CheckInPage() {
     });
   }, [teams, filter, trimmedSearch]);
 
-  // Suggestion 1: Auto-select exact match or single result so Enter works instantly
+  // Auto-select exact match or single result so Enter works instantly
   useEffect(() => {
     if (!trimmedSearch) {
       if (selectedIndex !== null && selectedIndex >= filteredTeams.length) {
@@ -99,7 +148,6 @@ export default function CheckInPage() {
     }
 
     if (filteredTeams.length > 1) {
-      // Prioritize exact Team ID match (e.g., "005" matches "LAK-005" or "LAK-005" matches "LAK-005")
       const exactIdx = filteredTeams.findIndex(t => {
         const idLower = t.teamId.toLowerCase();
         const normId = idLower.replace(/^(?:lak-?)?0*/i, '');
@@ -130,12 +178,102 @@ export default function CheckInPage() {
 
   const isDuplicateSearch = trimmedSearch && duplicateIds.has(trimmedSearch);
 
-  const handleCheckIn = async (teamId: string, rowIndex?: number) => {
-    const team = teams.find(t => t.teamId.toLowerCase() === teamId.toLowerCase());
-    if (!team) return;
+  // Undo attendance action
+  const handleUndo = async (teamId: string, popupWindow?: Window | null) => {
+    // 1. Immediately close WhatsApp window if open
+    if (popupWindow) {
+      closeWhatsAppWindow(popupWindow);
+    }
+    if (activeUndoRef.current?.teamId === teamId) {
+      if (activeUndoRef.current.waWindow) {
+        closeWhatsAppWindow(activeUndoRef.current.waWindow);
+      }
+      toast.dismiss(activeUndoRef.current.toastId);
+      clearTimeout(activeUndoRef.current.timeoutId);
+      activeUndoRef.current = null;
+    }
 
-    // Suggestion 9: Duplicate Check-in Soft Lock & Graceful Feedback
+    // 2. Unsend warning notification
+    toast.warning(
+      <div className="flex flex-col gap-1">
+        <div className="font-semibold text-white">Attendance Undone for Team {teamId}</div>
+        <div className="text-[11px] text-amber-200">
+          Note: If the WhatsApp message was already sent, it cannot be unsent.
+        </div>
+      </div>,
+      { duration: 6000 }
+    );
+
+    // 3. Optimistic local revert
+    updateTeamLocally(teamId, { isPresent: false, attendanceValue: '' });
+    setRecentlyMarked(prev => prev.filter(t => t.teamId.toLowerCase() !== teamId.toLowerCase()));
+    setAnnouncement(`Attendance undone for Team ${teamId}`);
+
+    // 4. Server authoritative call
+    try {
+      let token = await getIdToken();
+      if (!token) {
+        try {
+          const { auth } = await import('@/lib/firebase/client');
+          token = (await auth.currentUser?.getIdToken()) || null;
+        } catch {
+          token = null;
+        }
+      }
+      if (!token) token = 'session';
+
+      const res = await fetch('/api/check-in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'x-user-email': user?.email || 'Organizer',
+        },
+        body: JSON.stringify({
+          teamId,
+          action: 'undo',
+          executeLiveWrite: true,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        toast.error(`Undo failed on server: ${data.error || 'Unknown error'}`);
+        refreshTeams();
+      } else {
+        const entry: AuditEntry = {
+          id: `entry_${Date.now()}`,
+          teamId,
+          organizerUid: user?.uid ?? 'organizer',
+          organizerEmail: user?.email ?? 'Administrator',
+          action: 'UNDO',
+          status: 'success',
+          timestamp: new Date().toISOString(),
+        };
+        setRecentActivity(prev => [entry, ...prev].slice(0, 30));
+      }
+    } catch (err) {
+      toast.error(`Undo network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      refreshTeams();
+    }
+  };
+
+  // Check-In Action
+  const handleCheckIn = async (teamId: string, rowIndex?: number) => {
+    // CRITICAL: Synchronously open WhatsApp popup window BEFORE first await to avoid popup blockers
+    let waWindow: Window | null = null;
+    if (autoOpenWhatsApp) {
+      waWindow = openWhatsAppWindow();
+    }
+
+    const team = teams.find(t => t.teamId.toLowerCase() === teamId.toLowerCase());
+    if (!team) {
+      if (waWindow) closeWhatsAppWindow(waWindow);
+      return;
+    }
+
     if (team.isPresent) {
+      if (waWindow) closeWhatsAppWindow(waWindow);
       toast.info(
         <div className="flex flex-col gap-1">
           <div className="font-semibold text-white">Team {teamId} Already Checked In</div>
@@ -145,7 +283,6 @@ export default function CheckInPage() {
         </div>,
         { duration: 4000 }
       );
-      // Suggestion 3: Clear search so desk is ready
       setSearch('');
       setTimeout(() => searchInputRef.current?.focus(), 50);
       return;
@@ -177,6 +314,7 @@ export default function CheckInPage() {
         },
         body: JSON.stringify({
           teamId,
+          action: 'mark',
           idempotencyKey,
           rowIndex: rowIndex ?? team.rowIndex,
           executeLiveWrite: true,
@@ -187,38 +325,79 @@ export default function CheckInPage() {
       const data = await res.json().catch(() => ({}));
 
       if (data.success || res.ok) {
-        // Play crisp check-in success chime
         sound.playSuccessChime();
 
-        // Build WhatsApp Ping URL for Team Lead
-        const digits = (team.leaderPhone || '').replace(/\D/g, '');
-        const cleanPhone = digits.length === 10 ? `91${digits}` : digits;
-        const waMsg = encodeURIComponent(
-          `Hello ${team.teamName || 'Team'}!\n\nYour attendance has been marked PRESENT for LAKSHYA 2026.\n\n📍 Destination: CSE Seminar Hall\nDirections: Go straight and take a left\n\nWelcome to LAKSHYA 2026!`
-        );
-        const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${waMsg}` : null;
-
-        toast.success(
-          <div className="flex flex-col gap-1.5">
-            <div className="font-semibold text-white">Team {teamId} Checked In!</div>
-            <div className="text-[11px] text-emerald-300">Arrival email triggered &amp; Sheets updated.</div>
-            {waUrl && (
-              <a
-                href={waUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/40 text-xs font-semibold transition-colors w-fit shadow-[0_0_10px_rgba(37,211,102,0.2)]"
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>Ping Team Lead on WhatsApp</span>
-              </a>
-            )}
-          </div>,
-          { duration: 8000 }
-        );
+        if (data.data?.alreadyMarked) {
+          if (waWindow) closeWhatsAppWindow(waWindow);
+          toast.info(`Team ${teamId} was already marked Present.`);
+          updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
+          setSearch('');
+          setTimeout(() => searchInputRef.current?.focus(), 60);
+          return;
+        }
 
         // Update local state to Present
         updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
+
+        // Add to session's recently marked list (up to 10)
+        const now = Date.now();
+        setRecentlyMarked(prev => [
+          {
+            teamId,
+            teamName: team.teamName,
+            leaderName: team.leaderName,
+            leaderPhone: team.leaderPhone,
+            markedAt: now,
+          },
+          ...prev.filter(t => t.teamId.toLowerCase() !== teamId.toLowerCase()),
+        ].slice(0, 10));
+
+        // Populate WhatsApp Web chat in popup window
+        const cleanPhone = normalizeIndianPhone(team.leaderPhone);
+        if (cleanPhone && waWindow) {
+          const waMsg = buildCheckInMessage({
+            leadName: team.leaderName,
+            teamName: team.teamName,
+            teamId: team.teamId,
+          });
+          loadChat(waWindow, cleanPhone, waMsg);
+        } else if (waWindow) {
+          closeWhatsAppWindow(waWindow);
+        }
+
+        // Show 5-second Sonner toast with Undo action
+        const capturedWaWindow = waWindow;
+        const toastId = toast.success(
+          <div className="flex flex-col gap-1">
+            <div className="font-semibold text-white">Team {teamId} Checked In!</div>
+            <div className="text-[11px] text-[#A0A0A0]">
+              Press Ctrl+Z or click Undo within 5s to revert.
+            </div>
+          </div>,
+          {
+            duration: 5000,
+            action: {
+              label: 'Undo',
+              onClick: () => handleUndo(teamId, capturedWaWindow),
+            },
+          }
+        );
+
+        if (activeUndoRef.current?.timeoutId) {
+          clearTimeout(activeUndoRef.current.timeoutId);
+        }
+        const timeoutId = setTimeout(() => {
+          if (activeUndoRef.current?.teamId === teamId) {
+            activeUndoRef.current = null;
+          }
+        }, 5000);
+
+        activeUndoRef.current = {
+          teamId,
+          waWindow: capturedWaWindow,
+          toastId,
+          timeoutId,
+        };
 
         const entry: AuditEntry = {
           id: `entry_${Date.now()}`,
@@ -231,34 +410,41 @@ export default function CheckInPage() {
           timestamp: new Date().toISOString(),
         };
         setRecentActivity(prev => [entry, ...prev].slice(0, 30));
-        setAnnouncement(`Team ${teamId} Checked In! Arrival mail triggered.`);
+        setAnnouncement(`Team ${teamId} Checked In!`);
 
-        // Suggestion 3: Instant search clear & refocus for the next team in line
         setSearch('');
         setSelectedIndex(null);
         setTimeout(() => {
           searchInputRef.current?.focus();
         }, 60);
       } else {
+        if (waWindow) closeWhatsAppWindow(waWindow);
         sound.playWarningTone();
-        // Fallback: still mark present locally so event check-in desk is never blocked
-        updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
-        toast.warning(`Marked present locally. Note: ${data.error || 'Server sync pending'}`);
-        // Clear search on local fallback too
-        setSearch('');
-        setTimeout(() => searchInputRef.current?.focus(), 60);
+        toast.error(`Check-in failed: ${data.error || 'Server sync error'}`);
       }
     } catch {
+      if (waWindow) closeWhatsAppWindow(waWindow);
       sound.playWarningTone();
-      // Offline / network failure fallback
-      updateTeamLocally(teamId, { isPresent: true, attendanceValue: 'P' });
-      toast.warning(`Marked present locally (offline/network pending)`);
-      setSearch('');
-      setTimeout(() => searchInputRef.current?.focus(), 60);
+      toast.error('Network failure during check-in');
     } finally {
       setProcessingTeamId(undefined);
     }
   };
+
+  // Ctrl+Z / Cmd+Z Keydown Listener for active 5s undo
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        if (activeUndoRef.current) {
+          e.preventDefault();
+          const { teamId, waWindow } = activeUndoRef.current;
+          handleUndo(teamId, waWindow);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // 12 PRODUCTION KEYBOARD SHORTCUTS IMPLEMENTATION
   useKeyboardShortcuts([
@@ -326,22 +512,22 @@ export default function CheckInPage() {
         });
       },
     },
-    // 4. Enter — Open Selected Team
+    // 4. Enter — Mark Selected Team Present directly
     {
       id: 'open-selected',
       key: 'Enter',
-      description: 'Open Selected Team',
-      category: 'navigation',
+      description: 'Mark Selected Team Present',
+      category: 'attendance',
       allowInInput: false,
       handler: () => {
-        if (confirmingTeam || quickSearchOpen || helpOpen || exportOpen) return;
+        if (confirmingTeam || undoConfirmTeam || quickSearchOpen || helpOpen || exportOpen) return;
 
         if (selectedIndex !== null && filteredTeams[selectedIndex]) {
           const team = filteredTeams[selectedIndex];
           if (team.isPresent) {
             toast.info(`Team ${team.teamId} is already marked present.`);
           } else {
-            setConfirmingTeam(team);
+            handleCheckIn(team.teamId, team.rowIndex);
           }
         }
       },
@@ -358,6 +544,7 @@ export default function CheckInPage() {
         if (quickSearchOpen) { setQuickSearchOpen(false); return; }
         if (exportOpen) { setExportOpen(false); return; }
         if (confirmingTeam) { setConfirmingTeam(null); return; }
+        if (undoConfirmTeam) { setUndoConfirmTeam(null); return; }
         if (quickScanActive) { setQuickScanActive(false); return; }
 
         if (search) {
@@ -391,14 +578,14 @@ export default function CheckInPage() {
         }
         const team = filteredTeams[selectedIndex];
         if (team.isPresent) {
-          toast.info(`Team ${team.teamId} is already marked present. No further action needed.`);
+          toast.info(`Team ${team.teamId} is already marked present.`);
           return;
         }
         if (processingTeamId === team.teamId) {
           toast.warning(`Attendance operation is already pending for Team ${team.teamId}.`);
           return;
         }
-        setConfirmingTeam(team);
+        handleCheckIn(team.teamId, team.rowIndex);
       },
     },
     // 7. Alt + U — Filter Unmarked Teams
@@ -516,7 +703,7 @@ export default function CheckInPage() {
         onToggle={setQuickScanActive}
         teams={teams}
         onTeamScanned={team => {
-          setConfirmingTeam(team);
+          handleCheckIn(team.teamId, team.rowIndex);
         }}
       />
 
@@ -548,7 +735,7 @@ export default function CheckInPage() {
           />
         </div>
 
-        {/* Row 2: Attendance status filter tabs (All / Present / Not Present) and counter */}
+        {/* Row 2: Attendance status filter tabs, Auto-WhatsApp switch, and counter */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FilterTabs
             value={filter}
@@ -558,21 +745,107 @@ export default function CheckInPage() {
             }}
             counts={counts}
           />
-          <div className="flex items-center gap-3 text-xs text-[#808080]">
-            <span>
-              Showing <strong className="text-[#F0F0F0] font-mono">{filteredTeams.length}</strong> of{' '}
-              <strong className="text-[#F0F0F0] font-mono">{teams.length}</strong> teams
-            </span>
-            {selectedIndex !== null && filteredTeams[selectedIndex] && (
-              <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 font-mono text-[11px]">
-                Nav: {filteredTeams[selectedIndex].teamId} [{selectedIndex + 1}/{filteredTeams.length}]
+
+          <div className="flex items-center gap-3">
+            {/* WhatsApp Auto-Popup Switch */}
+            <button
+              onClick={toggleAutoOpenWhatsApp}
+              title="Automatically open WhatsApp Web popup upon verified check-in"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                autoOpenWhatsApp
+                  ? 'bg-[#25D366]/15 border-[#25D366]/40 text-[#25D366] shadow-[0_0_12px_rgba(37,211,102,0.15)]'
+                  : 'bg-white/[0.04] border-white/10 text-[#808080] hover:text-[#B0B0B0]'
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Auto WhatsApp:</span>
+              <span className="font-semibold">{autoOpenWhatsApp ? 'ON' : 'OFF'}</span>
+            </button>
+
+            <div className="flex items-center gap-3 text-xs text-[#808080]">
+              <span>
+                Showing <strong className="text-[#F0F0F0] font-mono">{filteredTeams.length}</strong> of{' '}
+                <strong className="text-[#F0F0F0] font-mono">{teams.length}</strong> teams
               </span>
-            )}
+              {selectedIndex !== null && filteredTeams[selectedIndex] && (
+                <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 font-mono text-[11px]">
+                  Nav: {filteredTeams[selectedIndex].teamId} [{selectedIndex + 1}/{filteredTeams.length}]
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* SINGLE-COLUMN FULL-WIDTH ATTENDANCE COUNTER */}
+      {/* RECENTLY MARKED SESSION HISTORY BAR (< 60s instant undo, > 60s confirmation) */}
+      {recentlyMarked.length > 0 && (
+        <div className="w-full rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl p-3.5 space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 font-medium text-[#E0E0E0]">
+              <Clock className="h-4 w-4 text-emerald-400" />
+              <span>Recently Checked In ({recentlyMarked.length})</span>
+              <span className="text-[11px] text-[#707070] hidden sm:inline">&middot; Undo directly within 60s</span>
+            </div>
+            <span className="text-[11px] text-[#606060] font-mono">Session History</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {recentlyMarked.map(item => {
+              const isRecent = Date.now() - item.markedAt <= 60000;
+              const phone = normalizeIndianPhone(item.leaderPhone);
+              const waChatUrl = phone
+                ? `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(
+                    buildCheckInMessage({
+                      leadName: item.leaderName,
+                      teamName: item.teamName,
+                      teamId: item.teamId,
+                    })
+                  )}`
+                : null;
+
+              return (
+                <div
+                  key={item.teamId}
+                  className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 text-xs text-[#E0E0E0] shadow-sm"
+                >
+                  <span className="font-mono font-bold text-emerald-400">{item.teamId}</span>
+                  <span className="truncate max-w-[130px] text-[#B0B0B0]" title={item.teamName}>
+                    {item.teamName}
+                  </span>
+                  {waChatUrl && (
+                    <a
+                      href={waChatUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open WhatsApp chat"
+                      className="text-[#25D366] hover:text-[#25D366]/80 p-0.5 rounded hover:bg-white/5 transition-colors"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (isRecent) {
+                        handleUndo(item.teamId);
+                      } else {
+                        setUndoConfirmTeam(item);
+                      }
+                    }}
+                    className="h-6 px-1.5 text-[11px] text-[#A0A0A0] hover:text-amber-300 hover:bg-amber-950/30"
+                  >
+                    <Undo2 className="h-3 w-3 mr-1" />
+                    Undo
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* SINGLE-COLUMN FULL-WIDTH ATTENDANCE LIST */}
       <div className="w-full">
         {loading && teams.length === 0 ? (
           <EmptyState variant="loading" />
@@ -601,7 +874,7 @@ export default function CheckInPage() {
                 isDuplicate={duplicateIds.has(team.teamId.toLowerCase())}
                 isSelected={selectedIndex === idx}
                 onSelect={() => setSelectedIndex(idx)}
-                onRequestCheckIn={() => setConfirmingTeam(team)}
+                onRequestCheckIn={() => handleCheckIn(team.teamId, team.rowIndex)}
               />
             ))}
           </div>
@@ -615,92 +888,36 @@ export default function CheckInPage() {
         </div>
       )}
 
-      {/* CENTRALIZED ATTENDANCE CONFIRMATION MODAL */}
-      <Dialog open={Boolean(confirmingTeam)} onOpenChange={open => !open && setConfirmingTeam(null)}>
-        <DialogContent
-          className="max-w-md bg-[#101010] border-white/10 text-[#F0F0F0]"
-          onKeyDown={async (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              if (!confirmingTeam || processingTeamId === confirmingTeam.teamId) return;
-              const target = confirmingTeam;
-              setConfirmingTeam(null);
-              await handleCheckIn(target.teamId, target.rowIndex);
-            }
-          }}
-        >
+      {/* ATTENDANCE UNDO CONFIRMATION MODAL (> 60 seconds) */}
+      <Dialog open={Boolean(undoConfirmTeam)} onOpenChange={open => !open && setUndoConfirmTeam(null)}>
+        <DialogContent className="max-w-md bg-[#101010] border-white/10 text-[#F0F0F0]">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#F0F0F0]">
-              Confirm Team Attendance
+            <DialogTitle className="text-base font-semibold text-amber-400 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Confirm Attendance Undo
             </DialogTitle>
             <DialogDescription className="text-xs text-[#808080]">
-              This writes &apos;P&apos; directly to column P of the live Google Sheet and verifies the update.
+              This attendance mark was registered more than 60 seconds ago. Reverting will clear Attendance in Google Sheets and mark the team absent.
             </DialogDescription>
           </DialogHeader>
 
-          {confirmingTeam && (
-            <div className="space-y-3">
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3.5 space-y-2 text-xs">
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
-                  <span className="text-[#808080]">Team ID</span>
-                  <span className="font-mono font-bold text-[#F0F0F0]">{confirmingTeam.teamId}</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
-                  <span className="text-[#808080]">Team Name</span>
-                  <span className="font-medium text-[#F0F0F0] truncate max-w-[220px]">
-                    {confirmingTeam.teamName}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
-                  <span className="text-[#808080]">Lead Name</span>
-                  <span className="text-[#B5B5B5] truncate max-w-[220px]">
-                    {confirmingTeam.leaderName || 'Unassigned'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
-                  <span className="text-[#808080]">College</span>
-                  <span className="text-[#B5B5B5] truncate max-w-[220px]">
-                    {confirmingTeam.college || 'Unlisted'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
-                  <span className="text-[#808080]">Target Row</span>
-                  <span className="font-mono text-[#F0F0F0]">Row {confirmingTeam.rowIndex ?? 'Auto-detect'}</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
-                  <span className="text-[#808080]">Attendance Cell</span>
-                  <span className="font-mono font-bold text-emerald-400">
-                    {confirmingTeam.rowIndex ? `P${confirmingTeam.rowIndex}` : 'Column P'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-[#808080]">Proposed Value</span>
-                  <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
-                    &apos;P&apos; <ArrowRight className="h-3 w-3 text-[#808080]" />
-                  </span>
-                </div>
+          {undoConfirmTeam && (
+            <div className="space-y-2.5 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-[#808080]">Team ID</span>
+                <span className="font-mono font-bold text-[#F0F0F0]">{undoConfirmTeam.teamId}</span>
               </div>
-
-              {/* Venue Arrival Directions Notice */}
-              <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3 space-y-1.5 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-                <div className="flex items-center gap-2 text-purple-300 font-semibold text-xs">
-                  <MapPin className="h-4 w-4 text-purple-400 shrink-0" />
-                  <span>Venue Arrival Instructions</span>
-                </div>
-                <div className="text-[11px] space-y-0.5 pl-6 text-[#E0E0E0]">
-                  <p>
-                    <span className="text-[#888888]">Destination: </span>
-                    <strong className="text-white">CSE Seminar Hall</strong>
-                  </p>
-                  <p>
-                    <span className="text-[#888888]">Directions: </span>
-                    <strong className="text-purple-300">Go straight and take a left</strong>
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-purple-300/80 pl-6 pt-1">
-                  <Mail className="h-3 w-3 text-purple-400" />
-                  <span>Arrival directions email automatically triggered to team lead</span>
-                </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-[#808080]">Team Name</span>
+                <span className="font-medium text-[#F0F0F0] truncate max-w-[220px]">
+                  {undoConfirmTeam.teamName}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-[#808080]">Time Since Check-in</span>
+                <span className="font-mono text-amber-300">
+                  {Math.round((Date.now() - undoConfirmTeam.markedAt) / 1000)}s ago
+                </span>
               </div>
             </div>
           )}
@@ -709,24 +926,23 @@ export default function CheckInPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setConfirmingTeam(null)}
+              onClick={() => setUndoConfirmTeam(null)}
               className="border-white/10 bg-white/[0.04] text-[#A0A0A0] hover:text-white"
             >
               Cancel (Esc)
             </Button>
             <Button
               size="sm"
-              autoFocus
               onClick={async () => {
-                if (!confirmingTeam) return;
-                const target = confirmingTeam;
-                setConfirmingTeam(null);
-                await handleCheckIn(target.teamId, target.rowIndex);
+                if (!undoConfirmTeam) return;
+                const target = undoConfirmTeam;
+                setUndoConfirmTeam(null);
+                await handleUndo(target.teamId);
               }}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              className="bg-red-600 hover:bg-red-500 text-white font-semibold"
             >
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Confirm &amp; Write &apos;P&apos; (Enter ↵)
+              <Undo2 className="h-3.5 w-3.5 mr-1" />
+              Confirm Undo
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -745,7 +961,7 @@ export default function CheckInPage() {
           if (team.isPresent) {
             toast.info(`Team ${team.teamId} is already marked present.`);
           } else {
-            setConfirmingTeam(team);
+            handleCheckIn(team.teamId, team.rowIndex);
           }
         }}
       />

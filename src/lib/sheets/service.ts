@@ -725,6 +725,99 @@ export async function writeAttendance(
 }
 
 /**
+ * Re-reads row, verifies Team ID uniqueness & position, then safely clears the Attendance cell ('').
+ * Read-back verifies that the cell is empty before returning success.
+ */
+export async function clearAttendance(
+  config: SheetsConfig,
+  teamId: string,
+  rowIndex: number
+): Promise<{ success: boolean; verifiedValue?: string; alreadyNotMarked?: boolean; error?: string }> {
+  if (!config.attendanceColumn) {
+    return { success: false, error: 'Attendance column is not configured in SheetsConfig.' };
+  }
+
+  // CRITICAL SAFETY GUARD: Confirm attendance clear CANNOT target email status column
+  if (config.emailStatusColumn && config.attendanceColumn.toUpperCase() === config.emailStatusColumn.toUpperCase()) {
+    return {
+      success: false,
+      error: `Safety Guard Violation: Attendance column '${config.attendanceColumn}' matches email status column '${config.emailStatusColumn}'. Write aborted to prevent data corruption.`,
+    };
+  }
+  if (config.attendanceColumn.toUpperCase() === 'Q') {
+    return {
+      success: false,
+      error: `Safety Guard Violation: Attendance operation attempted to target Column Q (Email Status).`,
+    };
+  }
+  if (config.attendanceColumn.toUpperCase() === 'S') {
+    return {
+      success: false,
+      error: `Safety Guard Violation: Attendance operation attempted to target Column S (Attendance Email Status).`,
+    };
+  }
+
+  const sheets = getSheetsClient();
+
+  try {
+    const verifyRange = `'${config.worksheetName}'!${config.teamIdColumn}${rowIndex}`;
+    const attendanceRange = `'${config.worksheetName}'!${config.attendanceColumn}${rowIndex}`;
+
+    const batchRes = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: config.spreadsheetId,
+      ranges: [verifyRange, attendanceRange],
+    });
+
+    const valueRanges = batchRes.data.valueRanges ?? [];
+    const actualTeamId = String(valueRanges[0]?.values?.[0]?.[0] ?? '').trim();
+    if (actualTeamId.toLowerCase() !== teamId.toLowerCase()) {
+      return {
+        success: false,
+        error: `Row position mismatch: Expected Team ID '${teamId}' at row ${rowIndex}, but found '${actualTeamId}'.`,
+      };
+    }
+
+    const currentValue = String(valueRanges[1]?.values?.[0]?.[0] ?? '').trim();
+    const upper = currentValue.toUpperCase();
+    if (upper !== 'PRESENT' && upper !== 'P' && !currentValue) {
+      return { success: true, verifiedValue: '', alreadyNotMarked: true };
+    }
+
+    // Clear attendance cell strictly
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: config.spreadsheetId,
+      range: attendanceRange,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [['']] },
+    });
+
+    // Read back and verify the cleared value
+    const confirmResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: config.spreadsheetId,
+      range: attendanceRange,
+    });
+    const confirmedValue = String(confirmResponse.data.values?.[0]?.[0] ?? '').trim();
+
+    if (confirmedValue !== '') {
+      return {
+        success: false,
+        error: `Verification failed: Attendance cell read back '${confirmedValue}' instead of empty string.`,
+      };
+    }
+
+    // Invalidate cached teams so subsequent fetch sees updated attendance
+    invalidateTeamsCache(config.spreadsheetId);
+
+    return { success: true, verifiedValue: '' };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown Google Sheets error during attendance clear.',
+    };
+  }
+}
+
+/**
  * Safely writes email status (SENT, FAILED, PENDING) strictly to the configured emailStatusColumn.
  * Guarantees that updating email status CANNOT overwrite Attendance (Column P).
  */

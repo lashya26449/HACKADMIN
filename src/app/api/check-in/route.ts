@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { verifyServerAuth } from '@/lib/firebase/server-auth';
 import {
   getTeamById, getSheetsConfig, claimOperation, checkIdempotency,
-  saveOperation, appendAuditEntry, markTeamPresent, upsertTeam
+  saveOperation, appendAuditEntry, markTeamPresent, markTeamAbsent,
+  getLatestMarkAudit, upsertTeam
 } from '@/lib/firestore/teams';
-import { writeAttendance, resolveWorksheetTitleByGid, inspectAndMapHeaders, syncTeamsFromSheet } from '@/lib/sheets/service';
+import {
+  writeAttendance, clearAttendance, resolveWorksheetTitleByGid,
+  inspectAndMapHeaders, syncTeamsFromSheet, invalidateTeamsCache
+} from '@/lib/sheets/service';
 import { isDemoMode, hasGoogleSheetsCredentials, LAKSHYA_SPREADSHEET_ID, LAKSHYA_WORKSHEET_GID } from '@/lib/demo-data';
 import { generateOperationId } from '@/lib/utils';
 import type { ApiResponse, CheckInOperation, AuditEntry, SheetsConfig } from '@/types';
@@ -25,17 +28,37 @@ export async function POST(request: NextRequest) {
 
     const { uid: organizerUid, email: organizerEmail, role: organizerRole } = authResult.user;
 
-    const body = await request.json();
-    const { teamId, idempotencyKey, source, rowIndex, executeLiveWrite } = body as {
+    // Safety Rule: Only super_admin and checkin_organizer may mark or undo attendance
+    if (organizerRole !== 'super_admin' && organizerRole !== 'checkin_organizer') {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: 'Forbidden: Insufficient permissions for attendance operations', timestamp },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const {
+      teamId,
+      idempotencyKey,
+      action = 'mark',
+      source,
+      rowIndex,
+      executeLiveWrite
+    } = body as {
       teamId: string;
-      idempotencyKey: string;
+      idempotencyKey?: string;
+      action?: 'mark' | 'undo';
       source?: string;
       rowIndex?: number;
       executeLiveWrite?: boolean;
     };
 
-    if (!teamId || !idempotencyKey) {
-      return NextResponse.json<ApiResponse>({ success: false, error: 'Missing teamId or idempotencyKey', timestamp }, { status: 400 });
+    if (!teamId) {
+      return NextResponse.json<ApiResponse>({ success: false, error: 'Missing teamId', timestamp }, { status: 400 });
+    }
+
+    if (action !== 'mark' && action !== 'undo') {
+      return NextResponse.json<ApiResponse>({ success: false, error: `Invalid action '${action}'. Must be 'mark' or 'undo'.`, timestamp }, { status: 400 });
     }
 
     const trimmedTeamId = teamId.trim();
@@ -44,8 +67,9 @@ export async function POST(request: NextRequest) {
     }
 
     const operationId = generateOperationId();
+    const effectiveIdempotencyKey = idempotencyKey || `${trimmedTeamId}_${action}_${Date.now()}`;
 
-    // LIVE MODE WRITE: If live source requested and Google Sheets credentials are configured
+    // LIVE MODE: Direct write/clear against Google Sheets
     if ((source === 'live' || executeLiveWrite) && hasGoogleSheetsCredentials()) {
       try {
         const writeStartTime = Date.now();
@@ -68,122 +92,185 @@ export async function POST(request: NextRequest) {
           configured: true,
         };
 
+        // Resolve target row and verify uniqueness
         let targetRow = rowIndex;
-        if (!targetRow) {
-          const { teams } = await syncTeamsFromSheet(config);
-          const found = teams.find(t => t.teamId.toLowerCase() === trimmedTeamId.toLowerCase());
-          if (found?.rowIndex) {
-            targetRow = found.rowIndex;
-          }
-        }
+        const { teams } = await syncTeamsFromSheet(config);
+        const matches = teams.filter(t => t.teamId.toLowerCase() === trimmedTeamId.toLowerCase());
 
-        if (!targetRow) {
-          return NextResponse.json<ApiResponse<object>>({
-            success: true,
-            data: {
-              teamId: trimmedTeamId,
-              operationId,
-              verified: true,
-              status: 'Present',
-              attendanceValue: 'P',
-              isLive: false,
-              warning: `Target row not found for Team ID '${trimmedTeamId}' in Google Sheet, marked present locally.`,
-            },
-            operationId,
+        if (matches.length === 0) {
+          return NextResponse.json<ApiResponse>({
+            success: false,
+            error: `Team ID '${trimmedTeamId}' not found in Google Sheet.`,
             timestamp,
-          });
+          }, { status: 404 });
+        }
+        if (matches.length > 1) {
+          return NextResponse.json<ApiResponse>({
+            success: false,
+            error: `Duplicate Team ID '${trimmedTeamId}' found on multiple rows (${matches.map(m => m.rowIndex).join(', ')}). Operation blocked for safety.`,
+            timestamp,
+          }, { status: 409 });
         }
 
-        // Row-verified Google Sheets attendance write and readback
-        let writeResult = await writeAttendance(config, trimmedTeamId, targetRow);
-        if (!writeResult.success && writeResult.error?.includes('Row position mismatch')) {
-          const { teams } = await syncTeamsFromSheet(config);
-          const found = teams.find(t => t.teamId.toLowerCase() === trimmedTeamId.toLowerCase());
-          if (found?.rowIndex) {
-            targetRow = found.rowIndex;
-            writeResult = await writeAttendance(config, trimmedTeamId, targetRow);
+        targetRow = matches[0].rowIndex!;
+        const matchedTeam = matches[0];
+
+        // ACTION: UNDO
+        if (action === 'undo') {
+          const undoResult = await clearAttendance(config, trimmedTeamId, targetRow);
+          if (!undoResult.success) {
+            return NextResponse.json<ApiResponse>({
+              success: false,
+              error: undoResult.error || 'Failed to clear attendance in Google Sheet',
+              timestamp,
+            }, { status: 500 });
           }
-        }
 
-        if (writeResult.success) {
+          // Invalidate cache immediately after verified clear
+          invalidateTeamsCache(spreadsheetId);
+
+          // Best-effort Firestore updates
+          try {
+            await markTeamAbsent(trimmedTeamId);
+            const auditEntry: AuditEntry = {
+              id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              teamId: trimmedTeamId,
+              teamName: matchedTeam.teamName,
+              organizerUid,
+              organizerEmail,
+              action: 'undo',
+              status: 'success',
+              previousValue: matchedTeam.attendanceValue || 'P',
+              newValue: '',
+              operationId,
+              timestamp: new Date().toISOString(),
+              reconciliationStatus: 'not_needed',
+            };
+            await appendAuditEntry(auditEntry);
+          } catch (e) {
+            console.warn('Firestore attendance log update failed (non-blocking):', e);
+          }
+
           return NextResponse.json<ApiResponse<object>>({
             success: true,
             data: {
               teamId: trimmedTeamId,
+              action: 'undo',
               operationId,
               verified: true,
-              status: 'Present',
-              attendanceValue: writeResult.verifiedValue || 'P',
+              status: 'Not Present',
+              attendanceValue: '',
               targetRow,
               targetCell: `${config.attendanceColumn}${targetRow}`,
+              alreadyNotMarked: undoResult.alreadyNotMarked || false,
               isLive: true,
               durationMs: Date.now() - writeStartTime,
             },
             operationId,
             timestamp,
           });
-        } else {
-          console.warn('Google Sheets write could not be confirmed, proceeding with local mark:', writeResult.error);
+        }
+
+        // ACTION: MARK
+        // If already marked present, don't rewrite; fetch latest mark audit if available
+        if (matchedTeam.isPresent || matchedTeam.attendanceValue?.toUpperCase() === 'P' || matchedTeam.attendanceValue?.toUpperCase() === 'PRESENT') {
+          const latestAudit = await getLatestMarkAudit(trimmedTeamId);
           return NextResponse.json<ApiResponse<object>>({
             success: true,
             data: {
               teamId: trimmedTeamId,
+              action: 'mark',
               operationId,
               verified: true,
+              alreadyMarked: true,
+              markedBy: latestAudit?.markedBy,
+              markedAt: latestAudit?.markedAt,
               status: 'Present',
               attendanceValue: 'P',
               targetRow,
-              isLive: false,
-              warning: writeResult.error,
+              targetCell: `${config.attendanceColumn}${targetRow}`,
+              isLive: true,
             },
             operationId,
             timestamp,
           });
         }
-      } catch (err) {
-        console.error('Live sheets attendance write error:', err);
+
+        // Write canonical 'P' and read-back verify
+        const writeResult = await writeAttendance(config, trimmedTeamId, targetRow);
+        if (!writeResult.success) {
+          return NextResponse.json<ApiResponse>({
+            success: false,
+            error: writeResult.error || 'Failed to verify attendance write in Google Sheet',
+            timestamp,
+          }, { status: 500 });
+        }
+
+        // Invalidate cache immediately after verified write
+        invalidateTeamsCache(spreadsheetId);
+
+        // Best-effort Firestore updates
+        try {
+          await markTeamPresent(trimmedTeamId);
+          const auditEntry: AuditEntry = {
+            id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            teamId: trimmedTeamId,
+            teamName: matchedTeam.teamName,
+            organizerUid,
+            organizerEmail,
+            action: 'mark',
+            status: 'success',
+            previousValue: matchedTeam.attendanceValue || '',
+            newValue: 'P',
+            operationId,
+            timestamp: new Date().toISOString(),
+            reconciliationStatus: 'not_needed',
+          };
+          await appendAuditEntry(auditEntry);
+        } catch (e) {
+          console.warn('Firestore attendance log update failed (non-blocking):', e);
+        }
+
         return NextResponse.json<ApiResponse<object>>({
           success: true,
           data: {
             teamId: trimmedTeamId,
+            action: 'mark',
             operationId,
             verified: true,
             status: 'Present',
-            attendanceValue: 'P',
-            isLive: false,
-            warning: err instanceof Error ? err.message : 'Sheets sync pending',
+            attendanceValue: writeResult.verifiedValue || 'P',
+            targetRow,
+            targetCell: `${config.attendanceColumn}${targetRow}`,
+            isLive: true,
+            durationMs: Date.now() - writeStartTime,
           },
           operationId,
           timestamp,
         });
-      }
-    }
 
-    // 3. Check idempotency (Demo or standard mode)
-    const isSimulated = isDemoMode();
-    if (!isSimulated) {
-      const existing = await checkIdempotency(idempotencyKey);
-      if (existing) {
-        return NextResponse.json<ApiResponse<object>>({
-          success: true,
-          data: { alreadyPresent: true, operationId: existing.operationId },
-          operationId: existing.operationId,
+      } catch (err) {
+        console.error('Live sheets attendance operation error:', err);
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: err instanceof Error ? err.message : 'Google Sheets operation failed',
           timestamp,
-        });
+        }, { status: 500 });
       }
     }
 
-    if (isSimulated) {
-      // Staging / Demo simulation
-      await new Promise(r => setTimeout(r, 600));
+    // 2. Demo / Simulated mode fallback
+    if (isDemoMode()) {
+      await new Promise(r => setTimeout(r, 300));
       return NextResponse.json<ApiResponse<object>>({
         success: true,
         data: {
           teamId: trimmedTeamId,
+          action,
           operationId,
           verified: true,
-          status: 'Present',
-          attendanceValue: 'P',
+          status: action === 'undo' ? 'Not Present' : 'Present',
+          attendanceValue: action === 'undo' ? '' : 'P',
           demo: true,
         },
         operationId,
@@ -191,7 +278,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 4. Claim operation via Firestore transaction lock
+    // 3. Fallback standard mode (Firestore-backed)
     const claimed = await claimOperation(operationId, trimmedTeamId, organizerUid);
     if (!claimed) {
       return NextResponse.json<ApiResponse>({
@@ -201,7 +288,6 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // 5. Get team from Firestore
     let team = await getTeamById(trimmedTeamId);
     if (!team) {
       team = {
@@ -217,102 +303,86 @@ export async function POST(request: NextRequest) {
       } catch {}
     }
 
-    if (team.isPresent) {
+    if (action === 'undo') {
+      if (!team.isPresent && !team.attendanceValue) {
+        return NextResponse.json<ApiResponse<object>>({
+          success: true,
+          data: { teamId: trimmedTeamId, action: 'undo', alreadyNotMarked: true, verified: true },
+          operationId,
+          timestamp,
+        });
+      }
+      await markTeamAbsent(trimmedTeamId);
+      const auditEntry: AuditEntry = {
+        id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        teamId: trimmedTeamId,
+        teamName: team.teamName,
+        organizerUid,
+        organizerEmail,
+        action: 'undo',
+        status: 'success',
+        previousValue: team.attendanceValue || 'P',
+        newValue: '',
+        operationId,
+        timestamp: new Date().toISOString(),
+        reconciliationStatus: 'not_needed',
+      };
+      await appendAuditEntry(auditEntry);
       return NextResponse.json<ApiResponse<object>>({
         success: true,
-        data: { alreadyPresent: true },
+        data: { teamId: trimmedTeamId, action: 'undo', verified: true, attendanceValue: '' },
         operationId,
         timestamp,
       });
     }
 
-    // 6. Get sheets config or resolve from environment
-    let config = await getSheetsConfig();
-    if (!config || !config.configured) {
-      const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || LAKSHYA_SPREADSHEET_ID;
-      const gid = process.env.GOOGLE_SHEETS_WORKSHEET_GID || LAKSHYA_WORKSHEET_GID;
-      const { title: worksheetName } = await resolveWorksheetTitleByGid(spreadsheetId, gid);
-      const inspection = await inspectAndMapHeaders(spreadsheetId, worksheetName, 1);
-
-      config = {
-        spreadsheetId,
-        worksheetName,
-        worksheetGid: gid,
-        teamIdColumn: inspection.config.teamIdColumn || 'A',
-        teamNameColumn: inspection.config.teamNameColumn || 'B',
-        collegeColumn: inspection.config.collegeColumn || 'C',
-        attendanceColumn: inspection.config.attendanceColumn || 'P',
-        emailStatusColumn: inspection.config.emailStatusColumn || 'Q',
-        headerRow: 1,
-        dataStartRow: 2,
-        configured: true,
-      };
-    }
-
-    if (!team.rowIndex) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: `Row index not mapped for Team ID '${trimmedTeamId}'. Please run a sync.`,
+    // Action: mark
+    if (team.isPresent) {
+      const latestAudit = await getLatestMarkAudit(trimmedTeamId);
+      return NextResponse.json<ApiResponse<object>>({
+        success: true,
+        data: {
+          teamId: trimmedTeamId,
+          action: 'mark',
+          alreadyMarked: true,
+          markedBy: latestAudit?.markedBy,
+          markedAt: latestAudit?.markedAt,
+          verified: true,
+        },
+        operationId,
         timestamp,
-        retryable: false
-      }, { status: 400 });
+      });
     }
-
-    // 7-11. Write attendance 'P' to sheet with row pre-validation and post-verification
-    const writeResult = await writeAttendance(config, trimmedTeamId, team.rowIndex);
-    
-    const operation: CheckInOperation = {
-      operationId,
-      teamId: trimmedTeamId,
-      teamName: team.teamName,
-      organizerUid,
-      organizerEmail,
-      idempotencyKey,
-      status: writeResult.success ? 'success' : 'needs_reconciliation',
-      attemptedAt: timestamp,
-      completedAt: new Date().toISOString(),
-      errorMessage: writeResult.error,
-      sheetVerified: writeResult.success,
-      sheetValue: writeResult.verifiedValue,
-      previousValue: '',
-    };
-    
-    await saveOperation(operation);
-
-    const auditEntry: AuditEntry = {
-      id: `audit_${Date.now()}`,
-      teamId: trimmedTeamId,
-      teamName: team.teamName,
-      organizerUid,
-      organizerEmail,
-      action: 'CHECK_IN',
-      status: writeResult.success ? 'success' : 'error',
-      previousValue: '',
-      newValue: writeResult.success ? 'P' : undefined,
-      operationId,
-      timestamp: new Date().toISOString(),
-      errorDetails: writeResult.error,
-      reconciliationStatus: writeResult.success ? 'not_needed' : 'pending',
-    };
-    
-    await appendAuditEntry(auditEntry);
 
     await markTeamPresent(trimmedTeamId);
+    const auditEntry: AuditEntry = {
+      id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      teamId: trimmedTeamId,
+      teamName: team.teamName,
+      organizerUid,
+      organizerEmail,
+      action: 'mark',
+      status: 'success',
+      previousValue: '',
+      newValue: 'P',
+      operationId,
+      timestamp: new Date().toISOString(),
+      reconciliationStatus: 'not_needed',
+    };
+    await appendAuditEntry(auditEntry);
 
     return NextResponse.json<ApiResponse<object>>({
       success: true,
       data: {
         teamId: trimmedTeamId,
+        action: 'mark',
         operationId,
         verified: true,
         attendanceValue: 'P',
-        sheetVerified: writeResult.success,
-        warning: writeResult.error,
       },
-      error: writeResult.error,
       operationId,
       timestamp,
-    }, { status: 200 });
+    });
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Internal server error';

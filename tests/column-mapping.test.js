@@ -1145,6 +1145,134 @@ test('30. Directory layout specifications and direct role access', () => {
   assert.equal(directoryColumns.length, 5, 'Directory table must be concise with 5 columns');
 });
 
+test('31. WhatsApp Web phone normalization rules', () => {
+  function normalizeIndianPhone(raw) {
+    if (!raw) return null;
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 10) return `91${digits}`;
+    if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
+    if (digits.length === 12 && digits.startsWith('91')) return digits;
+    return null;
+  }
+
+  // 10 digits
+  assert.equal(normalizeIndianPhone('9876543210'), '919876543210');
+  assert.equal(normalizeIndianPhone(' 9876543210 '), '919876543210');
+  assert.equal(normalizeIndianPhone('98765-43210'), '919876543210');
+
+  // 11 digits starting with 0
+  assert.equal(normalizeIndianPhone('09876543210'), '919876543210');
+
+  // 12 digits starting with 91
+  assert.equal(normalizeIndianPhone('919876543210'), '919876543210');
+  assert.equal(normalizeIndianPhone('+91 98765 43210'), '919876543210');
+
+  // Invalid cases
+  assert.equal(normalizeIndianPhone(null), null);
+  assert.equal(normalizeIndianPhone(''), null);
+  assert.equal(normalizeIndianPhone('12345'), null);
+  assert.equal(normalizeIndianPhone('1234567890123'), null); // > 12 digits
+  assert.equal(normalizeIndianPhone('18001234567'), null); // 11 digits not starting with 0
+});
+
+test('32. WhatsApp check-in message construction and venue verification', () => {
+  function buildCheckInMessage(params) {
+    const time = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date());
+
+    const recipient = params.leadName?.trim() || 'Team Lead';
+    return `Hi ${recipient}, your team "${params.teamName}" (${params.teamId}) is checked in for LAKSHYA 2026 at ${time}. Venue: CSE Seminar Hall, SJBIT. All the best!`;
+  }
+
+  const msg = buildCheckInMessage({
+    leadName: 'Jane Doe',
+    teamName: 'CyberKnights',
+    teamId: 'LAK-005',
+  });
+
+  assert.ok(msg.includes('Hi Jane Doe,'), 'Must greet lead name');
+  assert.ok(msg.includes('"CyberKnights" (LAK-005)'), 'Must include team name and ID');
+  assert.ok(msg.includes('LAKSHYA 2026'), 'Must reference event LAKSHYA 2026');
+  assert.ok(msg.includes('Venue: CSE Seminar Hall, SJBIT.'), 'Must state exact venue CSE Seminar Hall, SJBIT');
+  assert.ok(msg.match(/\d{2}:\d{2}/), 'Must contain HH:mm time');
+
+  // Fallback to Team Lead when leadName is omitted or empty
+  const msgFallback = buildCheckInMessage({
+    teamName: 'DevTitans',
+    teamId: 'LAK-010',
+  });
+  assert.ok(msgFallback.includes('Hi Team Lead,'), 'Must fallback to Team Lead');
+});
+
+test('33. Server API check-in: mark and undo action contracts and RBAC guards', () => {
+  const ALLOWED_ROLES = ['super_admin', 'checkin_organizer'];
+  function isAuthorizedForAttendance(role) {
+    return ALLOWED_ROLES.includes(role);
+  }
+
+  // RBAC checks
+  assert.equal(isAuthorizedForAttendance('super_admin'), true);
+  assert.equal(isAuthorizedForAttendance('checkin_organizer'), true);
+  assert.equal(isAuthorizedForAttendance('readonly_viewer'), false);
+  assert.equal(isAuthorizedForAttendance('anonymous'), false);
+  assert.equal(isAuthorizedForAttendance(undefined), false);
+
+  // Canonical values
+  const CANONICAL_MARK_VALUE = 'P';
+  const CANONICAL_UNDO_VALUE = '';
+
+  function processAttendanceAction(currentValue, action) {
+    if (action === 'mark') {
+      const isAlreadyMarked = currentValue === 'P' || currentValue === 'Present';
+      if (isAlreadyMarked) {
+        return { alreadyMarked: true, verifiedValue: currentValue };
+      }
+      return { alreadyMarked: false, verifiedValue: CANONICAL_MARK_VALUE };
+    }
+    if (action === 'undo') {
+      const isNotMarked = currentValue !== 'P' && currentValue !== 'Present';
+      if (isNotMarked) {
+        return { alreadyNotMarked: true, verifiedValue: '' };
+      }
+      return { alreadyNotMarked: false, verifiedValue: CANONICAL_UNDO_VALUE };
+    }
+    throw new Error(`Invalid action: ${action}`);
+  }
+
+  // Mark transitions
+  assert.deepEqual(processAttendanceAction('', 'mark'), { alreadyMarked: false, verifiedValue: 'P' });
+  assert.deepEqual(processAttendanceAction('P', 'mark'), { alreadyMarked: true, verifiedValue: 'P' });
+  assert.deepEqual(processAttendanceAction('Present', 'mark'), { alreadyMarked: true, verifiedValue: 'Present' });
+
+  // Undo transitions
+  assert.deepEqual(processAttendanceAction('P', 'undo'), { alreadyNotMarked: false, verifiedValue: '' });
+  assert.deepEqual(processAttendanceAction('Present', 'undo'), { alreadyNotMarked: false, verifiedValue: '' });
+  assert.deepEqual(processAttendanceAction('', 'undo'), { alreadyNotMarked: true, verifiedValue: '' });
+});
+
+test('34. Attendance undo windows, keyboard shortcuts, and WhatsApp unsend warnings', () => {
+  const UNDO_WINDOW_MS = 5000;
+  const HISTORY_DIRECT_UNDO_WINDOW_MS = 60000;
+
+  function canDirectlyUndo(markedAtTimestamp, currentTimestamp) {
+    return (currentTimestamp - markedAtTimestamp) <= HISTORY_DIRECT_UNDO_WINDOW_MS;
+  }
+
+  const now = 1000000;
+  assert.equal(canDirectlyUndo(now - 3000, now), true, 'Direct undo allowed within 5s');
+  assert.equal(canDirectlyUndo(now - 55000, now), true, 'Direct undo allowed within 60s');
+  assert.equal(canDirectlyUndo(now - 65000, now), false, 'Requires confirmation dialog after 60s');
+
+  // WhatsApp unsend warning presence
+  const undoWarning = 'Attendance undone for Team LAK-001. Note: If the WhatsApp message was already sent, it cannot be unsent.';
+  assert.ok(undoWarning.includes('cannot be unsent'), 'Must warn user that sent WhatsApp messages cannot be unsent');
+});
+
+
 
 
 

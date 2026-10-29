@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import type { Team } from '@/types';
 import { cn } from '@/lib/utils';
+import { normalizeIndianPhone, buildCheckInMessage } from '@/lib/whatsapp';
 
 interface TeamCardProps {
   team: Team;
@@ -51,6 +52,17 @@ export function TeamCard({
       setLocalError(err instanceof Error ? err.message : 'Check-in failed');
     }
   };
+
+  const cleanPhone = normalizeIndianPhone(team.leaderPhone);
+  const waChatUrl = cleanPhone
+    ? `https://web.whatsapp.com/send?phone=${encodeURIComponent(cleanPhone)}&text=${encodeURIComponent(
+        buildCheckInMessage({
+          leadName: team.leaderName,
+          teamName: team.teamName,
+          teamId: team.teamId,
+        })
+      )}`
+    : null;
 
   return (
     <>
@@ -145,23 +157,16 @@ export function TeamCard({
           <div className="shrink-0 min-w-[130px] flex justify-end">
             {isPresent ? (
               <div className="flex items-center gap-2">
-                {team.leaderPhone && (
+                {waChatUrl && (
                   <a
-                    href={(() => {
-                      const digits = team.leaderPhone.replace(/\D/g, '');
-                      const phone = digits.length === 10 ? `91${digits}` : digits;
-                      const msg = encodeURIComponent(
-                        `Hello ${team.teamName || 'Team'}!\n\nYour attendance has been marked PRESENT for LAKSHYA 2026.\n\n📍 Destination: CSE Seminar Hall\nDirections: Go straight and take a left\n\nWelcome to LAKSHYA 2026!`
-                      );
-                      return `https://wa.me/${phone}?text=${msg}`;
-                    })()}
+                    href={waChatUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95"
-                    title={`Ping ${team.leaderName || 'Lead'} on WhatsApp with arrival directions`}
+                    title={`Ping ${team.leaderName || 'Lead'} on WhatsApp`}
                   >
                     <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">WhatsApp Ping</span>
+                    <span className="hidden sm:inline">WhatsApp</span>
                   </a>
                 )}
                 <Button
@@ -176,7 +181,10 @@ export function TeamCard({
             ) : (
               <Button
                 size="sm"
-                onClick={() => onRequestCheckIn ? onRequestCheckIn() : setDialogOpen(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCheckIn(team.teamId, team.rowIndex);
+                }}
                 disabled={isProcessing || !canCheckIn || isDuplicate}
                 className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-400/30 border-t-emerald-300/50 shadow-[0_0_20px_-3px_rgba(16,185,129,0.4)] hover:shadow-[0_0_28px_0_rgba(16,185,129,0.55)] active:scale-95 transition-all"
               >

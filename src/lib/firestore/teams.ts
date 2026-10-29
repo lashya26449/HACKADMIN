@@ -43,6 +43,40 @@ export async function markTeamPresent(teamId: string): Promise<void> {
   });
 }
 
+export async function markTeamAbsent(teamId: string): Promise<void> {
+  const db = getAdminFirestore();
+  await db.collection(TEAMS_COLLECTION).doc(teamId).update({
+    isPresent: false,
+    attendanceValue: '',
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function getLatestMarkAudit(teamId: string): Promise<{ markedBy?: string; markedAt?: string } | null> {
+  try {
+    const db = getAdminFirestore();
+    const snapshot = await db.collection(AUDIT_COLLECTION)
+      .where('teamId', '==', teamId)
+      .where('status', '==', 'success')
+      .orderBy('timestamp', 'desc')
+      .limit(5)
+      .get();
+
+    if (snapshot.empty) return null;
+    const markEntry = snapshot.docs
+      .map(d => d.data() as AuditEntry)
+      .find(e => e.action === 'CHECK_IN' || e.action === 'mark');
+
+    if (!markEntry) return null;
+    return {
+      markedBy: markEntry.organizerEmail || markEntry.organizerUid,
+      markedAt: markEntry.timestamp,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function claimOperation(operationId: string, teamId: string, organizerUid: string): Promise<boolean> {
   const db = getAdminFirestore();
   const ref = db.collection(OPERATIONS_COLLECTION).doc(operationId);
