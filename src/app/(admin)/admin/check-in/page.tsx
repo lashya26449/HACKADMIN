@@ -17,7 +17,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, generateIdempotencyKey } from '@/lib/utils';
 import {
-  openWhatsAppWindow, loadChat, closeWhatsAppWindow,
+  openWhatsAppWindow, openInitialWhatsAppWeb, loadChat, closeWhatsAppWindow,
   normalizeIndianPhone, buildCheckInMessage,
   getWhatsAppMode, setWhatsAppMode, type WhatsAppMode
 } from '@/lib/whatsapp';
@@ -803,8 +803,21 @@ export default function CheckInPage() {
             {/* Open WhatsApp Web Window (One-Time Setup on Event Day) */}
             <button
               onClick={() => {
-                openWhatsAppWindow('https://web.whatsapp.com');
-                toast.info('Opened dedicated WhatsApp Web window. Log in here and close any other WhatsApp tabs to prevent "Use Here".');
+                const win = openInitialWhatsAppWeb();
+                setWhatsappModeState('web');
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                  toast.error(
+                    <div className="flex flex-col gap-1">
+                      <div className="font-semibold text-white">Pop-up Blocked by Browser!</div>
+                      <div className="text-[11px] text-amber-200">
+                        Check the right side of your browser address bar, click the pop-up icon, and select &quot;Always allow pop-ups&quot;.
+                      </div>
+                    </div>,
+                    { duration: 8000 }
+                  );
+                } else {
+                  toast.info('Opened dedicated WhatsApp Web window. Log in here and close any other WhatsApp tabs to prevent "Use Here".');
+                }
               }}
               title="Open or focus the dedicated WhatsApp Web window (click once on event day to log in)"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"

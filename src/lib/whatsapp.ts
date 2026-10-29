@@ -105,6 +105,38 @@ export function dispatchDesktopWhatsApp(phone: string, message: string): boolean
 }
 
 /**
+ * Opens the dedicated WhatsApp Web window directly (bypasses mode check).
+ * Automatically sets WhatsApp mode to 'web' and focuses the window.
+ */
+export function openInitialWhatsAppWeb(): Window | null {
+  if (typeof window === 'undefined') return null;
+  setWhatsAppMode('web');
+
+  try {
+    if (activePopup && !activePopup.closed) {
+      try {
+        activePopup.location.href = 'https://web.whatsapp.com';
+      } catch {
+        window.open('https://web.whatsapp.com', WHATSAPP_WINDOW_NAME);
+      }
+      try {
+        activePopup.focus();
+      } catch {}
+      return activePopup;
+    }
+    activePopup = window.open('https://web.whatsapp.com', WHATSAPP_WINDOW_NAME, 'width=560,height=760,left=850,top=60');
+    if (activePopup) {
+      try {
+        activePopup.focus();
+      } catch {}
+    }
+    return activePopup;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Synchronously opens or reuses the dedicated WhatsApp popup window (only for 'web' mode).
  * In 'desktop' mode, returns null so NO browser popup is created.
  */
