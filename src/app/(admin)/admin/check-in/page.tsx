@@ -32,7 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   CheckCircle2, ArrowRight, RefreshCw, MapPin, Mail, MessageSquare,
-  Undo2, Clock, AlertTriangle, Smartphone
+  Undo2, Clock, AlertTriangle, Smartphone, ExternalLink
 } from 'lucide-react';
 import { sound } from '@/lib/audio';
 
@@ -87,6 +87,29 @@ export default function CheckInPage() {
       toast.info(`Auto-open WhatsApp popup: ${next ? 'ENABLED' : 'DISABLED'}`);
       return next;
     });
+  };
+
+  const handleTestWhatsAppWindow = () => {
+    const win = openWhatsAppWindow();
+    if (win) {
+      try {
+        win.location.href = 'https://web.whatsapp.com';
+        win.focus?.();
+      } catch {
+        window.open('https://web.whatsapp.com', 'whatsapp-web');
+      }
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <div className="font-semibold text-white">WhatsApp Window Launched</div>
+          <div className="text-[11px] text-emerald-300">
+            Scan the QR code once to log in. This same window will stay ready and be reused for all team check-ins!
+          </div>
+        </div>,
+        { duration: 6000 }
+      );
+    } else {
+      toast.error('Popup was blocked by your browser. Please click the popup icon in your address bar and select "Always allow popups" for HackAdmin.');
+    }
   };
 
   // Keyboard navigation & dialog states
@@ -746,7 +769,17 @@ export default function CheckInPage() {
             counts={counts}
           />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Open / Test Window Pre-launch Button */}
+            <button
+              onClick={handleTestWhatsAppWindow}
+              title="Test or pre-open WhatsApp Web window (scan QR code once before the event starts)"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Launch / Test Window</span>
+            </button>
+
             {/* WhatsApp Auto-Popup Switch */}
             <button
               onClick={toggleAutoOpenWhatsApp}
