@@ -62,7 +62,7 @@ export function TeamCard({
           teamId: team.teamId,
         })
       )}`
-    : null;
+    : (team.whatsappUrl || null);
 
   return (
     <>
@@ -179,27 +179,42 @@ export function TeamCard({
                 </Button>
               </div>
             ) : (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCheckIn(team.teamId, team.rowIndex);
-                }}
-                disabled={isProcessing || !canCheckIn || isDuplicate}
-                className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-400/30 border-t-emerald-300/50 shadow-[0_0_20px_-3px_rgba(16,185,129,0.4)] hover:shadow-[0_0_28px_0_rgba(16,185,129,0.55)] active:scale-95 transition-all"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                    Marking...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                    MARK PRESENT
-                  </>
+              <div className="flex items-center gap-2">
+                {waChatUrl && (
+                  <a
+                    href={waChatUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95 shrink-0"
+                    title={`Open WhatsApp chat with ${team.leaderName || 'Lead'}`}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">WhatsApp</span>
+                  </a>
                 )}
-              </Button>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCheckIn(team.teamId, team.rowIndex);
+                  }}
+                  disabled={isProcessing || !canCheckIn || isDuplicate}
+                  className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-400/30 border-t-emerald-300/50 shadow-[0_0_20px_-3px_rgba(16,185,129,0.4)] hover:shadow-[0_0_28px_0_rgba(16,185,129,0.55)] active:scale-95 transition-all"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                      Marking...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                      MARK PRESENT
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         </div>
