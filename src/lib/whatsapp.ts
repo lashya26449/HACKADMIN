@@ -6,19 +6,21 @@
 
 let activePopup: Window | null = null;
 
+export const WHATSAPP_WINDOW_NAME = 'hackadmin_whatsapp';
+
 export type WhatsAppMode = 'desktop' | 'web';
 
 /**
  * Gets the current WhatsApp delivery mode from localStorage ('desktop' | 'web').
- * Defaults to 'desktop' because WhatsApp Desktop is installed on the system.
+ * Defaults to 'web' (WhatsApp Web in a dedicated reusable window).
  */
 export function getWhatsAppMode(): WhatsAppMode {
-  if (typeof window === 'undefined') return 'desktop';
+  if (typeof window === 'undefined') return 'web';
   const saved = localStorage.getItem('hackadmin_whatsapp_mode') as WhatsAppMode | null;
   if (saved === 'desktop' || saved === 'web') {
     return saved;
   }
-  return 'desktop';
+  return 'web';
 }
 
 /**
@@ -106,7 +108,7 @@ export function dispatchDesktopWhatsApp(phone: string, message: string): boolean
  * Synchronously opens or reuses the dedicated WhatsApp popup window (only for 'web' mode).
  * In 'desktop' mode, returns null so NO browser popup is created.
  */
-export function openWhatsAppWindow(): Window | null {
+export function openWhatsAppWindow(initialUrl: string = ''): Window | null {
   if (typeof window === 'undefined') return null;
   const mode = getWhatsAppMode();
   if (mode === 'desktop') {
@@ -115,12 +117,19 @@ export function openWhatsAppWindow(): Window | null {
 
   try {
     if (activePopup && !activePopup.closed) {
+      if (initialUrl) {
+        try {
+          activePopup.location.href = initialUrl;
+        } catch {
+          window.open(initialUrl, WHATSAPP_WINDOW_NAME);
+        }
+      }
       try {
         activePopup.focus();
       } catch {}
       return activePopup;
     }
-    activePopup = window.open('', 'whatsapp-web', 'width=520,height=720,left=900,top=80');
+    activePopup = window.open(initialUrl, WHATSAPP_WINDOW_NAME, 'width=560,height=760,left=850,top=60');
     return activePopup;
   } catch {
     return null;
@@ -129,19 +138,19 @@ export function openWhatsAppWindow(): Window | null {
 
 /**
  * Triggers the pre-filled chat message.
- * - In 'desktop' mode (default): Dispatches to WhatsApp Desktop on Windows with ZERO new windows and NO "Use Here".
- * - In 'web' mode: Navigates the persistent popup window to WhatsApp Web.
+ * - In 'desktop' mode: Dispatches to native WhatsApp Desktop on Windows.
+ * - In 'web' mode (default): Reuses the single dedicated WhatsApp Web window without opening new windows.
  */
 export function loadChat(win: Window | null, phone: string, message: string, overrideMode?: WhatsAppMode): boolean {
   if (typeof window === 'undefined') return false;
   const mode = overrideMode || getWhatsAppMode();
 
-  // 1. Native Windows WhatsApp Desktop mode: NO new browser window, NO "Use Here"
+  // 1. Native Windows WhatsApp Desktop mode: NO browser window
   if (mode === 'desktop') {
     return dispatchDesktopWhatsApp(phone, message);
   }
 
-  // 2. Web Popup Mode
+  // 2. Web Popup Mode: Strictly reuse the SAME window (named 'hackadmin_whatsapp')
   const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
   const target = win || activePopup;
 
@@ -150,8 +159,8 @@ export function loadChat(win: Window | null, phone: string, message: string, ove
       try {
         target.location.href = url;
       } catch {
-        const reopened = window.open(url, 'whatsapp-web');
-        if (reopened) activePopup = reopened;
+        // Cross-origin fallback: window.open with the existing target name navigates the existing window
+        window.open(url, WHATSAPP_WINDOW_NAME);
       }
       try {
         target.focus();
@@ -159,7 +168,8 @@ export function loadChat(win: Window | null, phone: string, message: string, ove
       return true;
     }
 
-    const newWin = window.open(url, 'whatsapp-web', 'width=520,height=720,left=900,top=80');
+    // If no window exists yet, open one named 'hackadmin_whatsapp'
+    const newWin = window.open(url, WHATSAPP_WINDOW_NAME, 'width=560,height=760,left=850,top=60');
     if (newWin) {
       activePopup = newWin;
       try {
@@ -169,7 +179,12 @@ export function loadChat(win: Window | null, phone: string, message: string, ove
     }
     return false;
   } catch {
-    return false;
+    try {
+      window.open(url, WHATSAPP_WINDOW_NAME);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

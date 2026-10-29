@@ -69,8 +69,8 @@ export default function CheckInPage() {
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  // WhatsApp delivery mode ('desktop' native app vs 'web' popup). Defaults to desktop for zero reloads / no "Use Here".
-  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('desktop');
+  // WhatsApp delivery mode ('desktop' native app vs 'web' popup). Defaults to 'web' (WhatsApp Web in dedicated window).
+  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('web');
 
   // Load settings on mount
   useEffect(() => {
@@ -124,12 +124,12 @@ export default function CheckInPage() {
       toast.success(
         <div className="flex flex-col gap-1">
           <div className="font-semibold text-white">
-            WhatsApp Triggered ({whatsappMode === 'desktop' ? 'Desktop App' : 'Web Popup'})
+            WhatsApp Triggered ({whatsappMode === 'desktop' ? 'Desktop App' : 'WhatsApp Web'})
           </div>
           <div className="text-[11px] text-emerald-300">
             {whatsappMode === 'desktop'
-              ? 'Dispatched directly to WhatsApp Desktop app. No browser windows opened & no "Use Here" prompt!'
-              : 'Dispatched to browser WhatsApp Web popup.'}
+              ? 'Dispatched directly to WhatsApp Desktop app.'
+              : 'Loaded in your opened WhatsApp Web window. No new window opened!'}
           </div>
         </div>,
         { duration: 6000 }
@@ -800,13 +800,26 @@ export default function CheckInPage() {
           />
 
           <div className="flex items-center gap-2.5">
+            {/* Open WhatsApp Web Window (One-Time Setup on Event Day) */}
+            <button
+              onClick={() => {
+                openWhatsAppWindow('https://web.whatsapp.com');
+                toast.info('Opened dedicated WhatsApp Web window. Log in here and close any other WhatsApp tabs to prevent "Use Here".');
+              }}
+              title="Open or focus the dedicated WhatsApp Web window (click once on event day to log in)"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Open Web App</span>
+            </button>
+
             {/* Test Trigger Button */}
             <button
               onClick={handleTestWhatsAppWindow}
-              title="Test WhatsApp trigger immediately on a sample team (zero new windows, zero 'Use Here' in Desktop mode)"
+              title="Test WhatsApp trigger immediately on a sample team (reuses the same window)"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <Zap className="h-3.5 w-3.5 text-emerald-400" />
+              <Zap className="h-3.5 w-3.5 text-cyan-400" />
               <span className="hidden sm:inline">Test Trigger</span>
             </button>
 
@@ -815,8 +828,8 @@ export default function CheckInPage() {
               onClick={handleToggleMode}
               title={
                 whatsappMode === 'desktop'
-                  ? 'Desktop App active (opens native Windows app instantly with no "Use Here" prompt). Click to switch to Web popup.'
-                  : 'Web Popup active (opens browser popup window). Click to switch to Desktop app.'
+                  ? 'Desktop App active. Click to switch to WhatsApp Web popup.'
+                  : 'WhatsApp Web active (uses single dedicated browser window). Click to switch to Desktop app.'
               }
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer shadow-sm active:scale-95 ${
                 whatsappMode === 'desktop'
@@ -826,7 +839,7 @@ export default function CheckInPage() {
             >
               <Smartphone className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Mode:</span>
-              <span className="font-semibold">{whatsappMode === 'desktop' ? 'Desktop App' : 'Web Popup'}</span>
+              <span className="font-semibold">{whatsappMode === 'desktop' ? 'Desktop App' : 'WhatsApp Web'}</span>
             </button>
 
             {/* WhatsApp Auto-Popup Switch */}
