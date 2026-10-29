@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import type { Team } from '@/types';
 import { cn } from '@/lib/utils';
-import { normalizeIndianPhone, buildCheckInMessage } from '@/lib/whatsapp';
+import { normalizeIndianPhone, buildCheckInMessage, loadChat } from '@/lib/whatsapp';
 
 interface TeamCardProps {
   team: Team;
@@ -158,16 +158,24 @@ export function TeamCard({
             {isPresent ? (
               <div className="flex items-center gap-2">
                 {waChatUrl && (
-                  <a
-                    href={waChatUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95"
-                    title={`Ping ${team.leaderName || 'Lead'} on WhatsApp`}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (cleanPhone) {
+                        loadChat(null, cleanPhone, buildCheckInMessage({
+                          leadName: team.leaderName,
+                          teamName: team.teamName,
+                          teamId: team.teamId,
+                        }));
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95 cursor-pointer"
+                    title={`Open WhatsApp chat with ${team.leaderName || 'Lead'} in the same window`}
                   >
                     <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                     <span className="hidden sm:inline">WhatsApp</span>
-                  </a>
+                  </button>
                 )}
                 <Button
                   size="sm"
@@ -181,17 +189,24 @@ export function TeamCard({
             ) : (
               <div className="flex items-center gap-2">
                 {waChatUrl && (
-                  <a
-                    href={waChatUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95 shrink-0"
-                    title={`Open WhatsApp chat with ${team.leaderName || 'Lead'}`}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (cleanPhone) {
+                        loadChat(null, cleanPhone, buildCheckInMessage({
+                          leadName: team.leaderName,
+                          teamName: team.teamName,
+                          teamId: team.teamId,
+                        }));
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 transition-all shadow-[0_0_12px_rgba(37,211,102,0.15)] hover:shadow-[0_0_18px_rgba(37,211,102,0.3)] active:scale-95 shrink-0 cursor-pointer"
+                    title={`Open WhatsApp chat with ${team.leaderName || 'Lead'} in the same window`}
                   >
                     <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                     <span className="hidden sm:inline">WhatsApp</span>
-                  </a>
+                  </button>
                 )}
                 <Button
                   size="sm"

@@ -812,16 +812,21 @@ export default function CheckInPage() {
                   <span className="truncate max-w-[130px] text-[#B0B0B0]" title={item.teamName}>
                     {item.teamName}
                   </span>
-                  {waChatUrl && (
-                    <a
-                      href={waChatUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Open WhatsApp chat"
-                      className="text-[#25D366] hover:text-[#25D366]/80 p-0.5 rounded hover:bg-white/5 transition-colors"
+                  {phone && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loadChat(null, phone, buildCheckInMessage({
+                          leadName: item.leaderName,
+                          teamName: item.teamName,
+                          teamId: item.teamId,
+                        }));
+                      }}
+                      title="Open WhatsApp chat in the same window"
+                      className="text-[#25D366] hover:text-[#25D366]/80 p-0.5 rounded hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       <MessageSquare className="h-3.5 w-3.5" />
-                    </a>
+                    </button>
                   )}
                   <Button
                     size="sm"

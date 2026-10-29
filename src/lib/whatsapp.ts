@@ -1,7 +1,10 @@
 /**
  * WhatsApp Web integration helpers for HackAdmin (LAKSHYA 2026).
- * Follows strict TypeScript typing and browser popup lifecycle best practices.
+ * Ensures a single persistent popup window is reused across check-ins and
+ * triggers the pre-filled chat URL whenever the attendance column updates.
  */
+
+let activePopup: Window | null = null;
 
 /**
  * Normalizes an Indian phone number to 12 digits with the '91' country code.
@@ -48,29 +51,61 @@ export function buildCheckInMessage(params: {
 }
 
 /**
- * Synchronously opens a dedicated WhatsApp popup window.
+ * Synchronously opens or reuses the dedicated WhatsApp popup window.
  * MUST be invoked synchronously during a user gesture (click/Enter) before any await
  * to avoid triggering modern browser popup blockers.
  */
 export function openWhatsAppWindow(): Window | null {
   if (typeof window === 'undefined') return null;
   try {
-    return window.open('', 'whatsapp-web', 'width=520,height=720,left=900,top=80');
+    if (activePopup && !activePopup.closed) {
+      try {
+        activePopup.focus();
+      } catch {}
+      return activePopup;
+    }
+    activePopup = window.open('', 'whatsapp-web', 'width=520,height=720,left=900,top=80');
+    return activePopup;
   } catch {
     return null;
   }
 }
 
 /**
- * Navigates an already opened WhatsApp popup window to the specific chat.
- * Returns true if navigation succeeded, false if popup was closed or inaccessible.
+ * Navigates the single persistent WhatsApp popup window to the specific chat.
+ * When the attendance column updates, this triggers the URL in the SAME window
+ * and brings it into focus. Handles cross-origin fallback transparently.
  */
 export function loadChat(win: Window | null, phone: string, message: string): boolean {
-  if (!win || win.closed) return false;
+  if (typeof window === 'undefined') return false;
+  const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
+  const target = win || activePopup;
+
   try {
-    const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
-    win.location.href = url;
-    return true;
+    if (target && !target.closed) {
+      try {
+        target.location.href = url;
+      } catch {
+        // Cross-origin boundary fallback: window.open targeting the same window name navigates it natively
+        const reopened = window.open(url, 'whatsapp-web');
+        if (reopened) activePopup = reopened;
+      }
+      try {
+        target.focus();
+      } catch {}
+      return true;
+    }
+
+    // Open/navigate in the same named window if not already active
+    const newWin = window.open(url, 'whatsapp-web', 'width=520,height=720,left=900,top=80');
+    if (newWin) {
+      activePopup = newWin;
+      try {
+        newWin.focus();
+      } catch {}
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -79,12 +114,16 @@ export function loadChat(win: Window | null, phone: string, message: string): bo
 /**
  * Closes the WhatsApp popup window safely if still open.
  */
-export function closeWhatsAppWindow(win: Window | null): void {
-  if (win && !win.closed) {
+export function closeWhatsAppWindow(win?: Window | null): void {
+  const target = win || activePopup;
+  if (target && !target.closed) {
     try {
-      win.close();
+      target.close();
     } catch {
       // Ignore cross-origin close restriction if popup was redirected
     }
+  }
+  if (target === activePopup) {
+    activePopup = null;
   }
 }
