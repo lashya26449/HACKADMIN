@@ -132,7 +132,18 @@ export default function DetailsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            {source === 'live_google_sheet' ? (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-xs sm:text-sm text-emerald-400 font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="hidden xs:inline">Live Sheet</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-xs sm:text-sm text-neutral-300 font-medium">
+                Preview Mode
+              </span>
+            )}
+
             <button
               onClick={fetchDetails}
               disabled={loading}
@@ -175,39 +186,24 @@ export default function DetailsPage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 flex-1 w-full space-y-5 sm:space-y-7">
-        {/* Search & Stats Bar */}
-        <div className="flex flex-col sm:flex-row gap-3.5 items-stretch sm:items-center justify-between">
-          <div className="relative flex-1 max-w-xl">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search Team ID, Team Name, Member, College, or Phone..."
-              className="w-full pl-12 pr-11 py-3 sm:py-3.5 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/20 text-base sm:text-lg text-white placeholder-neutral-500 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/25 transition-all font-sans"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-white rounded-lg active:scale-90"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 text-xs sm:text-sm text-neutral-300">
-            {source === 'live_google_sheet' ? (
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-xs sm:text-sm text-emerald-400 font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                Live Sheet
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/15 text-xs sm:text-sm text-neutral-300 font-medium">
-                Preview Mode
-              </span>
-            )}
-          </div>
+        {/* Search Bar (Clean Full-Width Input) */}
+        <div className="relative w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search Team ID, Team Name, Member, College, or Phone..."
+            className="w-full pl-12 pr-11 py-3.5 sm:py-4 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/20 text-base sm:text-lg text-white placeholder-neutral-500 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/25 transition-all font-sans"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-white rounded-lg active:scale-90"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {/* Loading Skeleton */}
@@ -248,35 +244,35 @@ export default function DetailsPage() {
                 onClick={() => setSelectedTeam(team)}
                 className="group relative rounded-3xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] hover:border-white/40 backdrop-blur-2xl p-4 sm:p-6 transition-all duration-200 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.45)] hover:shadow-[0_12px_40px_0_rgba(255,255,255,0.08)] active:scale-[0.99] flex items-center justify-between gap-4"
               >
-                {/* Left Side: Team ID and Team Name (Large, Ultra-Legible, 1-Line Team ID) */}
+                {/* Left Side: Team ID and Team Name (Team ID on left, Name starting to the right) */}
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center">
-                    <span className="font-mono text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-white/10 border border-white/25 text-white tracking-widest shadow-inner whitespace-nowrap shrink-0 inline-flex items-center select-none">
+                  <div className="flex items-start gap-2.5 sm:gap-3.5">
+                    <span className="font-mono text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-white/10 border border-white/25 text-white tracking-widest shadow-inner whitespace-nowrap shrink-0 inline-flex items-center select-none mt-0.5">
                       {team.teamId}
                     </span>
+                    <h3 className="text-base sm:text-xl font-black text-white tracking-tight break-words group-hover:text-neutral-100 transition-colors">
+                      {team.teamName}
+                    </h3>
                   </div>
-                  <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight break-words group-hover:text-neutral-100 transition-colors">
-                    {team.teamName}
-                  </h3>
                 </div>
 
-                {/* Right Side: College Name in Small, Team Lead Name, and Mobile Direct Call */}
-                <div className="text-right shrink-0 max-w-[48%] sm:max-w-[260px] space-y-1.5">
-                  <p className="text-xs sm:text-sm text-neutral-300 font-medium truncate" title={team.college}>
+                {/* Right Side: College Name in Small, Team Lead Name, and Mobile Direct Call (Full text, no '... dot') */}
+                <div className="text-right shrink-0 max-w-[48%] sm:max-w-[280px] space-y-1">
+                  <p className="text-xs sm:text-sm text-neutral-300 font-medium break-words leading-snug" title={team.college}>
                     {team.college}
                   </p>
-                  <p className="text-sm sm:text-base font-bold text-white truncate">
+                  <p className="text-sm sm:text-base font-bold text-white break-words leading-snug">
                     {team.leaderName}
                   </p>
                   {team.leaderPhone ? (
                     <a
                       href={`tel:${leadTel}`}
                       onClick={e => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 border border-white/25 text-xs sm:text-sm font-mono font-bold text-white transition-all active:scale-95 shadow-sm"
+                      className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 border border-white/25 text-xs sm:text-sm font-mono font-bold text-white transition-all active:scale-95 shadow-sm whitespace-nowrap"
                       title={`Call ${team.leaderName}`}
                     >
                       <Phone className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{team.leaderPhone}</span>
+                      <span>{team.leaderPhone}</span>
                     </a>
                   ) : (
                     <span className="text-xs text-neutral-500 italic">No phone</span>
