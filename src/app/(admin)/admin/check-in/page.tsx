@@ -69,8 +69,8 @@ export default function CheckInPage() {
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  // WhatsApp delivery mode ('desktop' native app vs 'web' popup). Defaults to 'web' (WhatsApp Web in dedicated window).
-  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('web');
+  // WhatsApp delivery mode ('desktop' native app vs 'web' popup). Defaults strictly to 'desktop' (WhatsApp Desktop app).
+  const [whatsappMode, setWhatsappModeState] = useState<WhatsAppMode>('desktop');
 
   // Load settings on mount
   useEffect(() => {
@@ -800,50 +800,14 @@ export default function CheckInPage() {
           />
 
           <div className="flex items-center gap-2.5">
-            {/* Open WhatsApp Web Window (One-Time Setup on Event Day) */}
-            <button
-              onClick={() => {
-                const win = openInitialWhatsAppWeb();
-                setWhatsappModeState('web');
-                if (!win || win.closed || typeof win.closed === 'undefined') {
-                  toast.error(
-                    <div className="flex flex-col gap-1">
-                      <div className="font-semibold text-white">Pop-up Blocked by Browser!</div>
-                      <div className="text-[11px] text-amber-200">
-                        Check the right side of your browser address bar, click the pop-up icon, and select &quot;Always allow pop-ups&quot;.
-                      </div>
-                    </div>,
-                    { duration: 8000 }
-                  );
-                } else {
-                  toast.info('Opened dedicated WhatsApp Web window. Log in here and close any other WhatsApp tabs to prevent "Use Here".');
-                }
-              }}
-              title="Open or focus the dedicated WhatsApp Web window (click once on event day to log in)"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"
-            >
-              <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Open Web App</span>
-            </button>
-
-            {/* Delivery Mode Toggle: Web vs Desktop App */}
-            <button
-              onClick={handleToggleMode}
-              title={
-                whatsappMode === 'desktop'
-                  ? 'Desktop App active. Click to switch to WhatsApp Web popup.'
-                  : 'WhatsApp Web active (uses single dedicated browser window). Click to switch to Desktop app.'
-              }
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer shadow-sm active:scale-95 ${
-                whatsappMode === 'desktop'
-                  ? 'border-cyan-500/40 bg-cyan-950/20 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.15)]'
-                  : 'border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white'
-              }`}
+            {/* Native WhatsApp Desktop App Active Badge */}
+            <span
+              title="Native WhatsApp Desktop app active (direct protocol dispatch with zero popups and zero 'Use Here' prompts)"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-cyan-500/40 bg-cyan-950/20 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
             >
               <Smartphone className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Mode:</span>
-              <span className="font-semibold">{whatsappMode === 'desktop' ? 'Desktop App' : 'WhatsApp Web'}</span>
-            </button>
+              <span>Desktop App</span>
+            </span>
 
             {/* WhatsApp Auto-Popup Switch */}
             <button

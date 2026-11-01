@@ -12,15 +12,15 @@ export type WhatsAppMode = 'desktop' | 'web';
 
 /**
  * Gets the current WhatsApp delivery mode from localStorage ('desktop' | 'web').
- * Defaults to 'web' (WhatsApp Web in a dedicated reusable window).
+ * Defaults to 'desktop' (native Windows WhatsApp Desktop app).
  */
 export function getWhatsAppMode(): WhatsAppMode {
-  if (typeof window === 'undefined') return 'web';
+  if (typeof window === 'undefined') return 'desktop';
   const saved = localStorage.getItem('hackadmin_whatsapp_mode') as WhatsAppMode | null;
   if (saved === 'desktop' || saved === 'web') {
     return saved;
   }
-  return 'web';
+  return 'desktop';
 }
 
 /**
