@@ -33,10 +33,34 @@ export default function DetailsPage() {
         if (data.serviceAccountEmail) {
           setServiceAccountEmail(data.serviceAccountEmail);
         }
+        // Save to offline cache
+        if (typeof window !== 'undefined' && data.teams.length > 0) {
+          try {
+            localStorage.setItem('lakshya_directory_cache', JSON.stringify({
+              teams: data.teams,
+              source: data.source,
+              timestamp: Date.now(),
+            }));
+          } catch {}
+        }
       } else {
         throw new Error(data.error || 'Failed to fetch details');
       }
     } catch (err) {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lakshya_directory_cache');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && Array.isArray(parsed.teams) && parsed.teams.length > 0) {
+              setTeams(parsed.teams);
+              setSource(parsed.source || 'live_google_sheet');
+              toast.info('Loaded directory from offline storage');
+              return;
+            }
+          } catch {}
+        }
+      }
       setError(err instanceof Error ? err.message : 'Failed to load details');
     } finally {
       setLoading(false);
@@ -44,6 +68,20 @@ export default function DetailsPage() {
   };
 
   useEffect(() => {
+    // Load from offline cache immediately on mount
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('lakshya_directory_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && Array.isArray(parsed.teams) && parsed.teams.length > 0) {
+            setTeams(parsed.teams);
+            setSource(parsed.source || 'live_google_sheet');
+            setLoading(false);
+          }
+        }
+      } catch {}
+    }
     fetchDetails();
   }, []);
 
@@ -159,16 +197,13 @@ export default function DetailsPage() {
           </div>
 
           <div className="flex items-center gap-3 text-xs sm:text-sm text-neutral-300">
-            <div className="px-3.5 py-2 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/15 font-medium">
-              Teams: <span className="font-mono font-extrabold text-white text-sm sm:text-base">{filteredTeams.length}</span> / {teams.length}
-            </div>
             {source === 'live_google_sheet' ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-xs sm:text-sm text-emerald-400 font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-xs sm:text-sm text-emerald-400 font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                 Live Sheet
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-xs sm:text-sm text-neutral-300 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/15 text-xs sm:text-sm text-neutral-300 font-medium">
                 Preview Mode
               </span>
             )}
@@ -213,15 +248,11 @@ export default function DetailsPage() {
                 onClick={() => setSelectedTeam(team)}
                 className="group relative rounded-3xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] hover:border-white/40 backdrop-blur-2xl p-4 sm:p-6 transition-all duration-200 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.45)] hover:shadow-[0_12px_40px_0_rgba(255,255,255,0.08)] active:scale-[0.99] flex items-center justify-between gap-4"
               >
-                {/* Left Side: Team ID and Team Name (Large, Ultra-Legible) */}
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-white/10 border border-white/25 text-white tracking-widest shadow-inner">
+                {/* Left Side: Team ID and Team Name (Large, Ultra-Legible, 1-Line Team ID) */}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex items-center">
+                    <span className="font-mono text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-white/10 border border-white/25 text-white tracking-widest shadow-inner whitespace-nowrap shrink-0 inline-flex items-center select-none">
                       {team.teamId}
-                    </span>
-                    <span className="text-xs sm:text-sm text-neutral-400 font-semibold flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
-                      <span>{team.members.length} {team.members.length === 1 ? 'member' : 'members'}</span>
                     </span>
                   </div>
                   <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight break-words group-hover:text-neutral-100 transition-colors">
