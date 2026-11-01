@@ -18,7 +18,7 @@ import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, generateIdempotencyKey } from '@/lib/utils';
 import {
   openWhatsAppWindow, openInitialWhatsAppWeb, loadChat, closeWhatsAppWindow,
-  normalizeIndianPhone, buildCheckInMessage,
+  normalizeIndianPhone, buildCheckInMessage, dispatchDesktopWhatsApp,
   getWhatsAppMode, setWhatsAppMode, type WhatsAppMode
 } from '@/lib/whatsapp';
 import type { AuditEntry, Team } from '@/types';
@@ -800,14 +800,42 @@ export default function CheckInPage() {
           />
 
           <div className="flex items-center gap-2.5">
-            {/* Native WhatsApp Desktop App Active Badge */}
-            <span
-              title="Native WhatsApp Desktop app active (direct protocol dispatch with zero popups and zero 'Use Here' prompts)"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-cyan-500/40 bg-cyan-950/20 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+            {/* Trigger WhatsApp Desktop App Button */}
+            <button
+              onClick={() => {
+                const sampleTeam = teams.find(t => t.leaderPhone) || {
+                  teamId: 'LAK-001',
+                  teamName: 'Byte Busters',
+                  leaderName: 'Aarav Sharma',
+                  leaderPhone: '9876543210',
+                };
+                const phone = normalizeIndianPhone(sampleTeam.leaderPhone) || '919876543210';
+                const msg = buildCheckInMessage({
+                  leadName: sampleTeam.leaderName,
+                  teamName: sampleTeam.teamName,
+                  teamId: sampleTeam.teamId,
+                });
+                const ok = dispatchDesktopWhatsApp(phone, msg);
+                if (ok) {
+                  toast.success(
+                    <div className="flex flex-col gap-1">
+                      <div className="font-semibold text-white">WhatsApp Desktop Triggered!</div>
+                      <div className="text-[11px] text-cyan-300">
+                        Dispatched directly to WhatsApp Desktop app.
+                      </div>
+                    </div>,
+                    { duration: 4000 }
+                  );
+                } else {
+                  toast.error('Failed to trigger WhatsApp Desktop.');
+                }
+              }}
+              title="Launch or test WhatsApp Desktop app directly (zero browser windows, zero 'Use Here' prompts)"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-cyan-500/40 bg-cyan-950/20 text-cyan-300 hover:bg-cyan-950/50 hover:border-cyan-400 transition-all cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95"
             >
-              <Smartphone className="h-3.5 w-3.5" />
-              <span>Desktop App</span>
-            </span>
+              <Smartphone className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Trigger Desktop App</span>
+            </button>
 
             {/* WhatsApp Auto-Popup Switch */}
             <button

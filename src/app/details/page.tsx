@@ -85,13 +85,10 @@ export default function DetailsPage() {
       {/* Top Banner / Header (Black & White Frosted Glass) */}
       <header className="sticky top-0 z-30 border-b border-white/15 bg-black/70 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-white text-black flex items-center justify-center font-black text-lg sm:text-xl shadow-[0_0_20px_rgba(255,255,255,0.25)] shrink-0">
-              L
-            </div>
+          <div className="flex items-center">
             <div>
-              <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
-                LAKSHYA 2026 &middot; <span className="text-neutral-300 font-bold">Team Directory</span>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Lakshya Team Directory
               </h1>
               <p className="text-xs sm:text-sm text-neutral-400 font-medium">Public Team & Member Details</p>
             </div>
@@ -166,8 +163,8 @@ export default function DetailsPage() {
               Teams: <span className="font-mono font-extrabold text-white text-sm sm:text-base">{filteredTeams.length}</span> / {teams.length}
             </div>
             {source === 'live_google_sheet' ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/25 text-xs sm:text-sm text-white font-semibold">
-                <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-xs sm:text-sm text-emerald-400 font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                 Live Sheet
               </span>
             ) : (
