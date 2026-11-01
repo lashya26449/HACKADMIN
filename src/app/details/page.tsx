@@ -139,7 +139,7 @@ export default function DetailsPage() {
       )}
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full space-y-4 sm:space-y-6">
         {/* Search & Stats Bar */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1 max-w-lg">
@@ -180,7 +180,7 @@ export default function DetailsPage() {
 
         {/* Loading Skeleton */}
         {loading && teams.length === 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-4">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="h-28 rounded-2xl bg-white/[0.02] border border-white/10 animate-pulse p-5" />
             ))}
@@ -206,8 +206,8 @@ export default function DetailsPage() {
           </div>
         )}
 
-        {/* Team Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        {/* Team Cards Grid: Strictly single card per row on mobile screens (< 1024px), dynamic 2-column layout on desktop (>= 1024px) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 w-full">
           {filteredTeams.map(team => {
             const leadTel = cleanPhone(team.leaderPhone);
             return (
