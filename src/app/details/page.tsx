@@ -207,51 +207,51 @@ export default function DetailsPage() {
         )}
 
         {/* Team Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {filteredTeams.map(team => {
             const leadTel = cleanPhone(team.leaderPhone);
             return (
               <div
                 key={team.teamId}
                 onClick={() => setSelectedTeam(team)}
-                className="group relative rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-emerald-500/40 p-4 sm:p-5 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 active:scale-[0.99] flex items-center justify-between gap-4"
+                className="group relative rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] active:bg-white/[0.08] hover:border-emerald-500/40 p-3.5 sm:p-5 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 active:scale-[0.99] flex items-center justify-between gap-3 sm:gap-4"
               >
                 {/* Left Side: Team ID and Team Name */}
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 tracking-wider">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="font-mono text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 tracking-wider">
                       {team.teamId}
                     </span>
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <Users className="h-3 w-3 text-slate-500" />
-                      {team.members.length} {team.members.length === 1 ? 'member' : 'members'}
+                    <span className="text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1">
+                      <Users className="h-3 w-3 text-slate-500 shrink-0" />
+                      <span>{team.members.length}</span>
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-white tracking-tight truncate group-hover:text-emerald-300 transition-colors">
+                  <h3 className="text-sm sm:text-base font-bold text-white tracking-tight break-words sm:truncate group-hover:text-emerald-300 transition-colors">
                     {team.teamName}
                   </h3>
                 </div>
 
                 {/* Right Side: College Name in Small, Team Lead Name, and Mobile Direct Call */}
-                <div className="text-right shrink-0 max-w-[200px] sm:max-w-[240px] space-y-1">
-                  <p className="text-[11px] text-slate-400 font-medium truncate" title={team.college}>
+                <div className="text-right shrink-0 max-w-[48%] sm:max-w-[240px] space-y-0.5 sm:space-y-1">
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate" title={team.college}>
                     {team.college}
                   </p>
-                  <p className="text-xs font-semibold text-slate-200 truncate">
+                  <p className="text-[11px] sm:text-xs font-semibold text-slate-200 truncate">
                     {team.leaderName}
                   </p>
                   {team.leaderPhone ? (
                     <a
                       href={`tel:${leadTel}`}
                       onClick={e => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-emerald-400 hover:text-emerald-300 hover:underline pt-0.5 transition-colors"
+                      className="inline-flex items-center gap-1 sm:gap-1.5 text-xs font-mono font-semibold text-emerald-400 hover:text-emerald-300 hover:underline pt-0.5 transition-colors active:scale-95"
                       title={`Call ${team.leaderName}`}
                     >
                       <Phone className="h-3 w-3 shrink-0" />
-                      <span>{team.leaderPhone}</span>
+                      <span className="truncate">{team.leaderPhone}</span>
                     </a>
                   ) : (
-                    <span className="text-[11px] text-slate-500 italic">No phone</span>
+                    <span className="text-[10px] sm:text-[11px] text-slate-500 italic">No phone</span>
                   )}
                 </div>
               </div>
@@ -260,46 +260,49 @@ export default function DetailsPage() {
         </div>
       </main>
 
-      {/* EXPANDED MODAL WITH BLUR BACKGROUND AROUND CARD */}
+      {/* EXPANDED MODAL WITH BLUR BACKGROUND AROUND CARD (MOBILE & DESKTOP ACCESSIBLE) */}
       {selectedTeam && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in-0 duration-200"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in-0 duration-200"
           onClick={() => setSelectedTeam(null)}
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl rounded-3xl border border-white/20 bg-[#0C1017] p-6 sm:p-8 shadow-2xl shadow-black/80 space-y-6 relative overflow-hidden animate-in zoom-in-95 duration-200"
+            className="w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-t-[28px] sm:rounded-3xl border border-white/20 bg-[#0C1017] p-5 sm:p-7 shadow-2xl shadow-black/90 relative overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
           >
+            {/* Mobile Sheet Pull Bar */}
+            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-2 sm:hidden shrink-0" />
+
             {/* Top Close Button */}
             <button
               onClick={() => setSelectedTeam(null)}
-              className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-90 z-10"
               aria-label="Close modal"
             >
               <X className="h-4 w-4" />
             </button>
 
             {/* Modal Header */}
-            <div className="space-y-2 border-b border-white/10 pb-5 pr-8">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-sm font-bold px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 tracking-wider">
+            <div className="space-y-1.5 border-b border-white/10 pb-4 pr-10 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs sm:text-sm font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 tracking-wider">
                   {selectedTeam.teamId}
                 </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <School className="h-3.5 w-3.5 text-slate-500" />
-                  {selectedTeam.college}
+                <span className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 truncate max-w-[240px] sm:max-w-none">
+                  <School className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <span className="truncate">{selectedTeam.college}</span>
                 </span>
               </div>
-              <h2 className="text-2xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight break-words">
                 {selectedTeam.teamName}
               </h2>
             </div>
 
-            {/* Members Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">
+            {/* Members Section (Scrollable on small screens) */}
+            <div className="space-y-2.5 py-3 overflow-y-auto flex-1 min-h-0 pr-1 -mr-1">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
                 <span>Team Members ({selectedTeam.members.length})</span>
                 <span>Contact</span>
               </div>
@@ -310,21 +313,21 @@ export default function DetailsPage() {
                   return (
                     <div
                       key={idx}
-                      className="p-3.5 sm:p-4 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors"
+                      className="p-3 sm:p-4 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
                     >
                       {/* Left: Member Name and College */}
                       <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="text-sm font-bold text-white truncate">
                             {member.name}
                           </span>
                           {member.isLeader && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                               Lead
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400 truncate">
+                        <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                           {member.college || selectedTeam.college}
                         </p>
                       </div>
@@ -334,10 +337,10 @@ export default function DetailsPage() {
                         {member.phone ? (
                           <a
                             href={`tel:${memberTel}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-mono font-semibold text-emerald-400 hover:text-emerald-300 transition-all active:scale-95 shadow-sm"
+                            className="inline-flex items-center gap-1.5 min-h-[38px] px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 active:bg-emerald-500/30 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-400 hover:text-emerald-300 transition-all active:scale-95 shadow-sm"
                             title={`Call ${member.name} directly`}
                           >
-                            <Phone className="h-3 w-3 shrink-0" />
+                            <Phone className="h-3.5 w-3.5 shrink-0" />
                             <span>{member.phone}</span>
                           </a>
                         ) : (
@@ -350,12 +353,11 @@ export default function DetailsPage() {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="pt-2 flex items-center justify-between text-xs text-slate-500">
-              <span>Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-mono text-[10px]">Esc</kbd> or click outside to close</span>
+            {/* Modal Footer (Cleaned: removed "Press Esc or click outside to close") */}
+            <div className="pt-3 border-t border-white/10 shrink-0 flex items-center justify-end">
               <button
                 onClick={() => setSelectedTeam(null)}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs transition-all"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/25 text-white font-medium text-xs transition-all active:scale-95"
               >
                 Close
               </button>
