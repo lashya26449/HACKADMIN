@@ -35,6 +35,23 @@ export interface Team {
   syncedAt?: string;
 }
 
+export interface TeamMemberDetail {
+  name: string;
+  college?: string;
+  phone?: string;
+  isLeader?: boolean;
+}
+
+export interface TeamDetailRecord {
+  teamId: string;
+  teamName: string;
+  college: string;
+  leaderName: string;
+  leaderPhone: string;
+  members: TeamMemberDetail[];
+  rowIndex?: number;
+}
+
 export type OperationStatus =
   | 'idle'
   | 'processing'

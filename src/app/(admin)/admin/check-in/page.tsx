@@ -826,16 +826,6 @@ export default function CheckInPage() {
               <span className="hidden sm:inline">Open Web App</span>
             </button>
 
-            {/* Test Trigger Button */}
-            <button
-              onClick={handleTestWhatsAppWindow}
-              title="Test WhatsApp trigger immediately on a sample team (reuses the same window)"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] text-[#B0B0B0] hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm active:scale-95"
-            >
-              <Zap className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Test Trigger</span>
-            </button>
-
             {/* Delivery Mode Toggle: Web vs Desktop App */}
             <button
               onClick={handleToggleMode}
