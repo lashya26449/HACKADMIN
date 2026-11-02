@@ -799,21 +799,13 @@ test('23. Column S Attendance Email Status: directions to CSE Seminar Hall, colu
   assert.notEqual(mapped.attendanceEmailCol, mapped.emailStatusCol, 'Attendance Email Status must NOT overwrite Column Q');
   assert.notEqual(mapped.attendanceEmailCol, mapped.attendanceCol, 'Attendance Email Status must NOT overwrite Column P');
 
-  // Arrival directions template validation
-  const venue = "CSE Seminar Hall";
-  const directions = "Go straight and take a left";
-  const teamName = "Byte Busters";
-  const teamId = "LAK-001";
-  const leadName = "Keshav n gowda";
-
-  const expectedSubject = `LAKSHYA 2026 | Attendance Confirmed — Move to ${venue}`;
-  assert.match(expectedSubject, /CSE Seminar Hall/);
-
-  const directionsBody = `Hello ${teamName}!\n\nYour attendance for LAKSHYA 2026 has been marked as PRESENT.\n\nVENUE & ARRIVAL DIRECTIONS:\n📍 Destination: ${venue}\n🚶 Directions: ${directions}\n\nTEAM DETAILS:\n• Team ID: ${teamId}\n• Team Name: ${teamName}\n• Team Lead: ${leadName}`;
-
-  assert.ok(directionsBody.includes("CSE Seminar Hall"));
-  assert.ok(directionsBody.includes("Go straight and take a left"));
-  assert.ok(directionsBody.includes("LAK-001"));
+  // Venue Allocation email subject and body validation matching VenueAllocation.gs
+  const { getLakshyaVenue } = require('../src/lib/venue.ts');
+  const testTeamId = "LAK-002";
+  const venueRecord = getLakshyaVenue(testTeamId);
+  const expectedSubject = `LAKSHYA 2026 | Venue Allocation — ${testTeamId}`;
+  assert.equal(expectedSubject, "LAKSHYA 2026 | Venue Allocation — LAK-002");
+  assert.deepEqual(venueRecord, { venue: "CS-1", floor: "Ground Floor" });
 });
 
 test('24. Gap-filling Team ID allocation: skips LAK-001, fills 26-33, skips 34-35, and moves directly to 36+', () => {
@@ -1175,18 +1167,9 @@ test('31. WhatsApp Web phone normalization rules', () => {
   assert.equal(normalizeIndianPhone('18001234567'), null); // 11 digits not starting with 0
 });
 
-test('32. WhatsApp check-in message construction and venue verification', () => {
-  function buildCheckInMessage(params) {
-    const time = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Kolkata',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(new Date());
-
-    const recipient = params.leadName?.trim() || 'Team Lead';
-    return `Hi ${recipient}, your team "${params.teamName}" (${params.teamId}) is checked in for LAKSHYA 2026 at ${time}. Venue: CSE Seminar Hall, SJBIT. All the best!`;
-  }
+test('32. WhatsApp check-in message construction and venue verification matching VenueAllocation', () => {
+  const { buildAttendanceWhatsAppMessage } = require('../src/lib/venue.ts');
+  const buildCheckInMessage = (params) => buildAttendanceWhatsAppMessage(params.teamName, params.teamId);
 
   const msg = buildCheckInMessage({
     leadName: 'Jane Doe',
@@ -1194,18 +1177,14 @@ test('32. WhatsApp check-in message construction and venue verification', () => 
     teamId: 'LAK-005',
   });
 
-  assert.ok(msg.includes('Hi Jane Doe,'), 'Must greet lead name');
-  assert.ok(msg.includes('"CyberKnights" (LAK-005)'), 'Must include team name and ID');
-  assert.ok(msg.includes('LAKSHYA 2026'), 'Must reference event LAKSHYA 2026');
-  assert.ok(msg.includes('Venue: CSE Seminar Hall, SJBIT.'), 'Must state exact venue CSE Seminar Hall, SJBIT');
-  assert.ok(msg.match(/\d{2}:\d{2}/), 'Must contain HH:mm time');
-
-  // Fallback to Team Lead when leadName is omitted or empty
-  const msgFallback = buildCheckInMessage({
-    teamName: 'DevTitans',
-    teamId: 'LAK-010',
-  });
-  assert.ok(msgFallback.includes('Hi Team Lead,'), 'Must fallback to Team Lead');
+  assert.ok(msg.includes('Hello CyberKnights Team!'), 'Must greet team name');
+  assert.ok(msg.includes('Your attendance for LAKSHYA 2026 has been confirmed.'));
+  assert.ok(msg.includes('Team Name: CyberKnights'));
+  assert.ok(msg.includes('Team ID: LAK-005'));
+  assert.ok(msg.includes('Venue: CS-1'), 'Must state exact allocated venue CS-1 for LAK-005');
+  assert.ok(msg.includes('Floor: Ground Floor'), 'Must state exact allocated floor Ground Floor for LAK-005');
+  assert.equal(msg.includes('Please proceed to your allotted venue.'), false, 'Must not include proceed to venue');
+  assert.ok(msg.includes('LAKSHYA 2026 Organizing Team\nSJBIT, Bengaluru'));
 });
 
 test('33. Server API check-in: mark and undo action contracts and RBAC guards', () => {
