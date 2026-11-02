@@ -4,6 +4,8 @@
  * to completely eliminate browser reloads, new popups, and "Use Here" prompts.
  */
 
+import { buildAttendanceWhatsAppMessage, getLakshyaVenue, VenueInfo } from './venue';
+
 let activePopup: Window | null = null;
 
 export const WHATSAPP_WINDOW_NAME = 'hackadmin_whatsapp';
@@ -58,22 +60,14 @@ export function normalizeIndianPhone(raw: string | null | undefined): string | n
 
 /**
  * Builds the official check-in notification message for the team lead.
- * Includes Indian Standard Time (Asia/Kolkata) in HH:mm 24-hour format.
+ * Formatted to match the Apps Script VenueAllocation module with verified venue & floor.
  */
 export function buildCheckInMessage(params: {
   leadName?: string;
   teamName: string;
   teamId: string;
 }): string {
-  const time = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date());
-
-  const recipient = params.leadName?.trim() || 'Team Lead';
-  return `Hi ${recipient}, your team "${params.teamName}" (${params.teamId}) is checked in for LAKSHYA 2026 at ${time}. Venue: CSE Seminar Hall, SJBIT. All the best!`;
+  return buildAttendanceWhatsAppMessage(params.teamName, params.teamId);
 }
 
 /**

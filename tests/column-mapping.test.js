@@ -1304,6 +1304,65 @@ test('35. WhatsApp delivery modes: web popup vs desktop URI protocol to prevent 
   assert.ok(web.uri.startsWith('https://web.whatsapp.com/send?phone=919876543210'));
 });
 
+test('36. VenueAllocation module mapping verification: 75 teams mapped, verified venue rooms & floors', () => {
+  const { LAKSHYA_VENUE_ALLOTMENT, getLakshyaVenue } = require('../src/lib/venue.ts');
+
+  const keys = Object.keys(LAKSHYA_VENUE_ALLOTMENT);
+  assert.equal(keys.length, 75, 'Must contain exactly 75 mapped team IDs matching VenueAllocation.gs');
+
+  // Ground Floor
+  assert.deepEqual(getLakshyaVenue('LAK-002'), { venue: 'CS-1', floor: 'Ground Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-008'), { venue: 'CS-1', floor: 'Ground Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-009'), { venue: 'CS-2', floor: 'Ground Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-015'), { venue: 'CS-2', floor: 'Ground Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-029'), { venue: 'ST LAB', floor: 'Ground Floor' });
+
+  // First Floor
+  assert.deepEqual(getLakshyaVenue('LAK-031'), { venue: 'VTU RESEARCH', floor: 'First Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-071'), { venue: 'VTU RESEARCH', floor: 'First Floor' });
+
+  // Second Floor
+  assert.deepEqual(getLakshyaVenue('LAK-022'), { venue: 'CV RAMAN', floor: 'Second Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-068'), { venue: 'CV RAMAN', floor: 'Second Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-016'), { venue: 'THOMAS ALVA EDISON', floor: 'Second Floor' });
+
+  // Third Floor
+  assert.deepEqual(getLakshyaVenue('LAK-032'), { venue: 'EDWARD LAB', floor: 'Third Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-052'), { venue: 'RAMANUJACHARYA LAB', floor: 'Third Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-059'), { venue: 'TIM BERNERS', floor: 'Third Floor' });
+
+  // Fourth Floor
+  assert.deepEqual(getLakshyaVenue('LAK-073'), { venue: 'ALLOTMENT PENDING', floor: 'Fourth Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-076'), { venue: 'ALLOTMENT PENDING', floor: 'Fourth Floor' });
+
+  // Unknown ID handling
+  assert.equal(getLakshyaVenue('LAK-999'), null);
+  assert.equal(getLakshyaVenue(null), null);
+  assert.equal(getLakshyaVenue(''), null);
+});
+
+test('37. WhatsApp venue allocation message construction matching Apps Script VenueAllocation.gs', () => {
+  const { buildAttendanceWhatsAppMessage, getLakshyaVenue } = require('../src/lib/venue.ts');
+
+  // Known team ID
+  const msgKnown = buildAttendanceWhatsAppMessage('CyberKnights', 'LAK-005');
+  assert.ok(msgKnown.includes('Hello CyberKnights Team!'), 'Must greet team');
+  assert.ok(msgKnown.includes('Your attendance for LAKSHYA 2026 has been confirmed.'), 'Must state attendance confirmed');
+  assert.ok(msgKnown.includes('TEAM DETAILS'), 'Must have team details section');
+  assert.ok(msgKnown.includes('Team Name: CyberKnights'));
+  assert.ok(msgKnown.includes('Team ID: LAK-005'));
+  assert.ok(msgKnown.includes('VENUE ALLOCATION'), 'Must have venue allocation section');
+  assert.ok(msgKnown.includes('Venue: CS-1'));
+  assert.ok(msgKnown.includes('Floor: Ground Floor'));
+  assert.ok(msgKnown.includes('Please proceed to your allotted venue.'));
+  assert.ok(msgKnown.includes('LAKSHYA 2026 Organizing Team\nSJBIT, Bengaluru'));
+
+  // Unknown team ID fallback
+  const msgUnknown = buildAttendanceWhatsAppMessage('UnknownSquad', 'LAK-999');
+  assert.ok(msgUnknown.includes('Venue: ALLOTMENT PENDING'));
+  assert.ok(msgUnknown.includes('Floor: Contact Organizers Desk'));
+});
+
 
 
 

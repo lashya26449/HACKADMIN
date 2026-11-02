@@ -5,7 +5,7 @@ import {
   Download, RefreshCw, Search, CheckCircle2,
   XCircle, Filter, FileSpreadsheet, Hash, Users, School,
   Phone, Mail, ShieldAlert, ExternalLink, Calendar,
-  CreditCard, Shield, ChevronRight, X, MessageSquare
+  CreditCard, Shield, ChevronRight, X, MessageSquare, MapPin
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { useTeams } from '@/contexts/TeamsContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { getLakshyaVenue } from '@/lib/venue';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { cn } from '@/lib/utils';
 import type { Team } from '@/types';
@@ -88,7 +89,9 @@ export default function RegistrationDirectoryPage() {
         const mCollege = (t.college ?? '').toLowerCase().includes(query);
         const mPhone = (t.leaderPhone ?? '').toLowerCase().includes(query);
         const mEmail = (t.leaderEmail ?? '').toLowerCase().includes(query);
-        if (!mId && !mName && !mLead && !mCollege && !mPhone && !mEmail) return false;
+        const v = getLakshyaVenue(t.teamId);
+        const mVenue = v ? v.venue.toLowerCase().includes(query) || v.floor.toLowerCase().includes(query) : false;
+        if (!mId && !mName && !mLead && !mCollege && !mPhone && !mEmail && !mVenue) return false;
       }
       return true;
     });
@@ -105,6 +108,8 @@ export default function RegistrationDirectoryPage() {
         'Team ID',
         'Team Name',
         'Team Lead',
+        'Venue',
+        'Floor',
         'College / Institution',
         'Degree',
         'Phone',
@@ -113,17 +118,22 @@ export default function RegistrationDirectoryPage() {
         'Attendance',
       ];
 
-      const rows = filteredTeams.map(t => [
-        `"${t.teamId}"`,
-        `"${(t.teamName || '').replace(/"/g, '""')}"`,
-        `"${(t.leaderName || '').replace(/"/g, '""')}"`,
-        `"${(t.college || '').replace(/"/g, '""')}"`,
-        `"${(t.degree || '').replace(/"/g, '""')}"`,
-        `"${t.leaderPhone || ''}"`,
-        `"${t.leaderEmail || ''}"`,
-        `"${t.members ? t.members.join('; ') : ''}"`,
-        `"${t.isPresent ? 'Present' : 'Not Marked'}"`,
-      ]);
+      const rows = filteredTeams.map(t => {
+        const v = getLakshyaVenue(t.teamId);
+        return [
+          `"${t.teamId}"`,
+          `"${(t.teamName || '').replace(/"/g, '""')}"`,
+          `"${(t.leaderName || '').replace(/"/g, '""')}"`,
+          `"${v ? v.venue : 'Pending'}"`,
+          `"${v ? v.floor : 'Pending'}"`,
+          `"${(t.college || '').replace(/"/g, '""')}"`,
+          `"${(t.degree || '').replace(/"/g, '""')}"`,
+          `"${t.leaderPhone || ''}"`,
+          `"${t.leaderEmail || ''}"`,
+          `"${t.members ? t.members.join('; ') : ''}"`,
+          `"${t.isPresent ? 'Present' : 'Not Marked'}"`,
+        ];
+      });
 
       const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
       const encodedUri = encodeURI(csvContent);
@@ -285,11 +295,20 @@ export default function RegistrationDirectoryPage() {
                           <div className="text-xs text-[#909090] mt-0.5 leading-tight">
                             {team.leaderName || 'Lead: Not specified'}
                           </div>
-                          <div className="mt-1">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-300/90 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 rounded">
                               <Users className="h-2.5 w-2.5" />
                               {memberCount} Members
                             </span>
+                            {(() => {
+                              const v = getLakshyaVenue(team.teamId);
+                              return v ? (
+                                <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-purple-300 bg-purple-950/40 border border-purple-500/30 px-1.5 py-0.5 rounded" title={`${v.venue} (${v.floor})`}>
+                                  <MapPin className="h-2.5 w-2.5 text-purple-400" />
+                                  {v.venue} &bull; {v.floor}
+                                </span>
+                              ) : null;
+                            })()}
                           </div>
                         </td>
 
@@ -375,6 +394,33 @@ export default function RegistrationDirectoryPage() {
             </DialogHeader>
 
             <div className="space-y-4 py-3 text-xs">
+              {/* Venue Allocation Box */}
+              {(() => {
+                const v = getLakshyaVenue(selectedTeam.teamId);
+                return (
+                  <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-1.5 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-purple-400" />
+                      Venue Allocation
+                    </p>
+                    {v ? (
+                      <div className="flex justify-between items-center text-xs pt-0.5">
+                        <div>
+                          <span className="text-[#808080] text-[11px] block">Venue Room</span>
+                          <span className="font-bold text-white font-mono text-base">{v.venue}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[#808080] text-[11px] block">Floor</span>
+                          <span className="font-semibold text-purple-300 text-sm">{v.floor}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#808080] italic">Venue allocation pending &middot; Approach organizing desk</p>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Leader & Contact Box */}
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 space-y-2.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Team Leader Details</p>

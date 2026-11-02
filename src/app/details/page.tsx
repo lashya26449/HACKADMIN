@@ -3,10 +3,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Search, Users, Phone, School, X,
-  Copy, Check, RefreshCw, AlertCircle
+  Copy, Check, RefreshCw, AlertCircle, MapPin
 } from 'lucide-react';
 import type { TeamDetailRecord, TeamMemberDetail } from '@/types';
 import { toast } from 'sonner';
+import { getLakshyaVenue } from '@/lib/venue';
 
 export default function DetailsPage() {
   const [teams, setTeams] = useState<TeamDetailRecord[]>([]);
@@ -101,7 +102,11 @@ export default function DetailsPage() {
         (m.college && m.college.toLowerCase().includes(q)) ||
         (m.phone && m.phone.toLowerCase().includes(q))
       );
-      return matchId || matchName || matchCollege || matchLead || matchPhone || matchMembers;
+      const venue = getLakshyaVenue(t.teamId);
+      const matchVenue = venue
+        ? venue.venue.toLowerCase().includes(q) || venue.floor.toLowerCase().includes(q)
+        : false;
+      return matchId || matchName || matchCollege || matchLead || matchPhone || matchMembers || matchVenue;
     });
   }, [teams, search]);
 
@@ -193,7 +198,7 @@ export default function DetailsPage() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search Team ID, Team Name, Member, College, or Phone..."
+            placeholder="Search Team ID, Team Name, Venue, Member, College, or Phone..."
             className="w-full pl-12 pr-11 py-3.5 sm:py-4 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/20 text-base sm:text-lg text-white placeholder-neutral-500 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/25 transition-all font-sans"
           />
           {search && (
@@ -238,14 +243,15 @@ export default function DetailsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
           {filteredTeams.map(team => {
             const leadTel = cleanPhone(team.leaderPhone);
+            const venueInfo = getLakshyaVenue(team.teamId);
             return (
               <div
                 key={team.teamId}
                 onClick={() => setSelectedTeam(team)}
                 className="group relative rounded-3xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] hover:border-white/40 backdrop-blur-2xl p-4 sm:p-6 transition-all duration-200 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.45)] hover:shadow-[0_12px_40px_0_rgba(255,255,255,0.08)] active:scale-[0.99] flex items-center justify-between gap-4"
               >
-                {/* Left Side: Team ID and Team Name (Team ID on left, Name starting to the right) */}
-                <div className="min-w-0 flex-1 space-y-1.5">
+                {/* Left Side: Team ID and Team Name with Allocated Venue Tag */}
+                <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-start gap-2.5 sm:gap-3.5">
                     <span className="font-mono text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-white/10 border border-white/25 text-white tracking-widest shadow-inner whitespace-nowrap shrink-0 inline-flex items-center select-none mt-0.5">
                       {team.teamId}
@@ -254,6 +260,14 @@ export default function DetailsPage() {
                       {team.teamName}
                     </h3>
                   </div>
+                  {venueInfo && (
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-neutral-200">
+                        <MapPin className="h-3.5 w-3.5 text-white shrink-0" />
+                        <span>{venueInfo.venue} &bull; {venueInfo.floor}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side: College Name in Small, Team Lead Name, and Mobile Direct Call (Full text, no '... dot') */}
@@ -323,6 +337,35 @@ export default function DetailsPage() {
                 {selectedTeam.teamName}
               </h2>
             </div>
+
+            {/* Venue Allocation Banner */}
+            {(() => {
+              const modalVenue = getLakshyaVenue(selectedTeam.teamId);
+              return modalVenue ? (
+                <div className="mt-4 p-4 rounded-2xl border border-white/20 bg-white/[0.05] backdrop-blur-xl flex items-center justify-between gap-4 shrink-0">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      Allocated Venue
+                    </span>
+                    <p className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {modalVenue.venue}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] text-neutral-400 font-mono block">Floor</span>
+                    <span className="text-sm sm:text-base font-bold text-neutral-200">
+                      {modalVenue.floor}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center gap-2.5 text-xs text-neutral-400 shrink-0">
+                  <MapPin className="h-4 w-4 text-neutral-500 shrink-0" />
+                  <span>Venue allocation pending &middot; Approach event organizers desk</span>
+                </div>
+              );
+            })()}
 
             {/* Members Section */}
             <div className="space-y-3 py-4 overflow-y-auto flex-1 min-h-0 pr-1 -mr-1">

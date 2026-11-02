@@ -11,6 +11,7 @@ import {
 import type { Team } from '@/types';
 import { cn } from '@/lib/utils';
 import { normalizeIndianPhone, buildCheckInMessage, loadChat } from '@/lib/whatsapp';
+import { getLakshyaVenue } from '@/lib/venue';
 
 interface TeamCardProps {
   team: Team;
@@ -53,6 +54,7 @@ export function TeamCard({
     }
   };
 
+  const venueInfo = getLakshyaVenue(team.teamId);
   const cleanPhone = normalizeIndianPhone(team.leaderPhone);
   const waChatUrl = cleanPhone
     ? `https://web.whatsapp.com/send?phone=${encodeURIComponent(cleanPhone)}&text=${encodeURIComponent(
@@ -115,6 +117,19 @@ export function TeamCard({
             <span className="text-xs text-[#808080] truncate max-w-[240px] lg:max-w-[360px]" title={team.college}>
               {team.college || 'Institution Unlisted'}
             </span>
+
+            {/* 5. Venue Allocation Badge */}
+            <span className="text-white/20 hidden sm:inline select-none">|</span>
+            {venueInfo ? (
+              <span className="inline-flex items-center gap-1 font-mono text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/35 text-purple-300" title={`${venueInfo.venue} (${venueInfo.floor})`}>
+                <MapPin className="h-3 w-3 shrink-0 text-purple-400" />
+                <span>{venueInfo.venue} &bull; {venueInfo.floor}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 font-mono text-[10px] text-neutral-500 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/10">
+                Venue Pending
+              </span>
+            )}
           </div>
 
           {/* Warnings / Errors */}
@@ -266,25 +281,25 @@ export function TeamCard({
             </div>
           </div>
 
-          {/* Venue Arrival Directions Notice */}
+          {/* Venue Allocation Instructions Notice */}
           <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3 space-y-1.5 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
             <div className="flex items-center gap-2 text-purple-300 font-semibold text-xs">
               <MapPin className="h-4 w-4 text-purple-400 shrink-0" />
-              <span>Venue Arrival Instructions</span>
+              <span>Allotted Venue Instructions</span>
             </div>
             <div className="text-[11px] space-y-0.5 pl-6 text-[#E0E0E0]">
               <p>
-                <span className="text-[#888888]">Destination: </span>
-                <strong className="text-white">CSE Seminar Hall</strong>
+                <span className="text-[#888888]">Allocated Venue: </span>
+                <strong className="text-white font-mono">{venueInfo?.venue || 'ALLOTMENT PENDING'}</strong>
               </p>
               <p>
-                <span className="text-[#888888]">Directions: </span>
-                <strong className="text-purple-300">Go straight and take a left</strong>
+                <span className="text-[#888888]">Floor: </span>
+                <strong className="text-purple-300">{venueInfo?.floor || 'Approach Organizing Desk'}</strong>
               </p>
             </div>
             <div className="flex items-center gap-1.5 text-[10px] text-purple-300/80 pl-6 pt-1">
               <Mail className="h-3 w-3 text-purple-400" />
-              <span>Arrival directions email automatically triggered to team lead</span>
+              <span>Venue allocation email and WhatsApp confirmation automatically updated</span>
             </div>
           </div>
 
