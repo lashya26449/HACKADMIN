@@ -146,7 +146,7 @@ export function QuickSearchDialog({
               setSelectedIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Type a Team ID (e.g. LAK-001), team name, leader, college..."
+            placeholder="Type a Team ID (e.g. LAK-002), team name, leader, college..."
             className="w-full bg-transparent text-sm text-[#F0F0F0] placeholder:text-[#808080] focus:outline-none font-mono"
             autoComplete="off"
             spellCheck={false}

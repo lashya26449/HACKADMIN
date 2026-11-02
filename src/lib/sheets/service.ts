@@ -428,6 +428,12 @@ export async function syncTeamsFromSheet(
       return;
     }
 
+    // 001 is not a valid team
+    const normTeamId = rawTeamId.toUpperCase().replace(/\s+/g, '');
+    if (normTeamId === 'LAK-001' || normTeamId === 'LAK-1' || normTeamId === '001' || normTeamId === '1') {
+      return;
+    }
+
     const tName = teamNameIdx >= 0 ? String(row[teamNameIdx] ?? '').trim() : '';
     const lEmail = leaderEmailIdx >= 0 ? String(row[leaderEmailIdx] ?? '').trim() : '';
     const rTime = timestampIdx >= 0 ? String(row[timestampIdx] ?? '').trim() : '';

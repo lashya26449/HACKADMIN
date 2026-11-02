@@ -21,19 +21,6 @@ export function naturalSortTeamIds(a: TeamDetailRecord, b: TeamDetailRecord): nu
 
 export const DEMO_DETAILS_TEAMS: TeamDetailRecord[] = [
   {
-    teamId: 'LAK-001',
-    teamName: 'Cyber Sentinels',
-    college: 'SJBIT Bangalore',
-    leaderName: 'Aarav Sharma',
-    leaderPhone: '9876543210',
-    members: [
-      { name: 'Aarav Sharma', college: 'SJBIT Bangalore', phone: '9876543210', isLeader: true },
-      { name: 'Diya Patel', college: 'SJBIT Bangalore', phone: '9876543211' },
-      { name: 'Rohan Gupta', college: 'SJBIT Bangalore', phone: '9876543212' },
-      { name: 'Ananya Rao', college: 'SJBIT Bangalore', phone: '9876543213' },
-    ],
-  },
-  {
     teamId: 'LAK-002',
     teamName: 'Neural Ninjas',
     college: 'RV College of Engineering',
@@ -177,6 +164,12 @@ export function parseDetailsRows(rows: string[][]): TeamDetailRecord[] {
     const teamName = String(row[teamNameIdx] || '').trim();
 
     if (!teamId && !teamName) continue;
+
+    // 001 is reserved/not a valid team
+    const normId = teamId.toUpperCase().replace(/\s+/g, '');
+    if (normId === 'LAK-001' || normId === 'LAK-1' || normId === '001' || normId === '1') {
+      continue;
+    }
 
     const primaryCollege = leadCollegeIdx !== -1 ? String(row[leadCollegeIdx] || '').trim() : '';
 

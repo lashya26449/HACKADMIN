@@ -107,12 +107,12 @@ export default function CheckInPage() {
 
   const handleTestWhatsAppWindow = () => {
     const sampleTeam = teams.find(t => t.leaderPhone) || {
-      teamId: 'LAK-001',
-      teamName: 'Byte Busters',
-      leaderName: 'Aarav Sharma',
-      leaderPhone: '9876543210',
+      teamId: 'LAK-002',
+      teamName: 'Neural Ninjas',
+      leaderName: 'Priya Sundaram',
+      leaderPhone: '9845123456',
     };
-    const phone = normalizeIndianPhone(sampleTeam.leaderPhone) || '919876543210';
+    const phone = normalizeIndianPhone(sampleTeam.leaderPhone) || '919845123456';
     const msg = buildCheckInMessage({
       leadName: sampleTeam.leaderName,
       teamName: sampleTeam.teamName,
@@ -784,7 +784,7 @@ export default function CheckInPage() {
                 document.getElementById(`team-card-${filteredTeams[last].teamId}`)?.scrollIntoView({ block: 'nearest' });
               }
             }}
-            placeholder="Search by Team ID (e.g. LAK-001), team name, leader, college... (Press '/' to focus)"
+            placeholder="Search by Team ID (e.g. LAK-002), team name, leader, college... (Press '/' to focus)"
           />
         </div>
 
@@ -804,12 +804,12 @@ export default function CheckInPage() {
             <button
               onClick={() => {
                 const sampleTeam = teams.find(t => t.leaderPhone) || {
-                  teamId: 'LAK-001',
-                  teamName: 'Byte Busters',
-                  leaderName: 'Aarav Sharma',
-                  leaderPhone: '9876543210',
+                  teamId: 'LAK-002',
+                  teamName: 'Neural Ninjas',
+                  leaderName: 'Priya Sundaram',
+                  leaderPhone: '9845123456',
                 };
-                const phone = normalizeIndianPhone(sampleTeam.leaderPhone) || '919876543210';
+                const phone = normalizeIndianPhone(sampleTeam.leaderPhone) || '919845123456';
                 const msg = buildCheckInMessage({
                   leadName: sampleTeam.leaderName,
                   teamName: sampleTeam.teamName,

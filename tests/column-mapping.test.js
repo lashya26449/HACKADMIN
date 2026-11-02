@@ -1363,6 +1363,51 @@ test('37. WhatsApp venue allocation message construction matching Apps Script Ve
   assert.ok(msgUnknown.includes('Floor: Contact Organizers Desk'));
 });
 
+test('38. Team 001 / LAK-001 is recognized as invalid and has no venue allotment', () => {
+  const { getLakshyaVenue, buildAttendanceWhatsAppMessage } = require('../src/lib/venue.ts');
+
+  // LAK-001 / 001 must return null (not in 75 verified teams)
+  assert.equal(getLakshyaVenue('LAK-001'), null);
+  assert.equal(getLakshyaVenue('001'), null);
+  assert.equal(getLakshyaVenue('lak-001'), null);
+
+  const msg001 = buildAttendanceWhatsAppMessage('TestTeam', 'LAK-001');
+  assert.ok(msg001.includes('Venue: ALLOTMENT PENDING'));
+  assert.ok(msg001.includes('Floor: Contact Organizers Desk'));
+});
+
+test('39. Verified venue allotment across all labs and floors for WhatsApp after marking present', () => {
+  const { buildAttendanceWhatsAppMessage, getLakshyaVenue } = require('../src/lib/venue.ts');
+
+  const testCases = [
+    { id: 'LAK-002', name: 'Neural Ninjas', venue: 'CS-1', floor: 'Ground Floor' },
+    { id: 'LAK-009', name: 'Alpha Devs', venue: 'CS-2', floor: 'Ground Floor' },
+    { id: 'LAK-029', name: 'ST Pioneers', venue: 'ST LAB', floor: 'Ground Floor' },
+    { id: 'LAK-031', name: 'Research Hub', venue: 'VTU RESEARCH', floor: 'First Floor' },
+    { id: 'LAK-016', name: 'Edison Club', venue: 'THOMAS ALVA EDISON', floor: 'Second Floor' },
+    { id: 'LAK-022', name: 'Raman Labs', venue: 'CV RAMAN', floor: 'Second Floor' },
+    { id: 'LAK-032', name: 'Edward Squad', venue: 'EDWARD LAB', floor: 'Third Floor' },
+    { id: 'LAK-052', name: 'Math Geniuses', venue: 'RAMANUJACHARYA LAB', floor: 'Third Floor' },
+    { id: 'LAK-059', name: 'Web Creators', venue: 'TIM BERNERS', floor: 'Third Floor' },
+    { id: 'LAK-073', name: 'Fourth Floor Team', venue: 'ALLOTMENT PENDING', floor: 'Fourth Floor' },
+  ];
+
+  for (const tc of testCases) {
+    const venueInfo = getLakshyaVenue(tc.id);
+    assert.equal(venueInfo.venue, tc.venue);
+    assert.equal(venueInfo.floor, tc.floor);
+
+    const msg = buildAttendanceWhatsAppMessage(tc.name, tc.id);
+    assert.ok(msg.includes(`Hello ${tc.name} Team!`));
+    assert.ok(msg.includes('Your attendance for LAKSHYA 2026 has been confirmed.'));
+    assert.ok(msg.includes(`Team Name: ${tc.name}`));
+    assert.ok(msg.includes(`Team ID: ${tc.id}`));
+    assert.ok(msg.includes(`Venue: ${tc.venue}`));
+    assert.ok(msg.includes(`Floor: ${tc.floor}`));
+    assert.ok(msg.includes('Please proceed to your allotted venue.'));
+  }
+});
+
 
 
 

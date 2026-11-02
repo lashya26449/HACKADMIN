@@ -17,7 +17,7 @@ export function SearchBar({
   value,
   onChange,
   onSubmit,
-  placeholder = 'Search by Team ID (e.g. LAK-001), team name, leader, college...',
+  placeholder = 'Search by Team ID (e.g. LAK-002), team name, leader, college...',
   inputRef: externalInputRef,
   onNavigateDown,
   onNavigateUp,

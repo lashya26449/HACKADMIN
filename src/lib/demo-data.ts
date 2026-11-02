@@ -5,22 +5,6 @@ export const LAKSHYA_WORKSHEET_GID = '1086772870';
 
 export const DEMO_TEAMS: Team[] = [
   {
-    teamId: 'LAK-001',
-    teamName: 'Byte Busters',
-    college: 'IIT Bombay',
-    leaderName: 'Aarav Sharma',
-    leaderEmail: 'aarav.sharma@iitb.ac.in',
-    leaderPhone: '+91 98765 43210',
-    degree: 'B.Tech CSE (3rd Year)',
-    memberCount: 4,
-    members: ['Aarav Sharma', 'Rohan Gupta', 'Neha Verma', 'Vikram Singh'],
-    collegeIdUrls: ['https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsTuVwXyZ01234/view'],
-    paymentRef: 'UPI/402819283921',
-    paymentStatus: 'Submitted',
-    isPresent: false,
-    registeredAt: '2026-10-01T10:00:00Z',
-  },
-  {
     teamId: 'LAK-002',
     teamName: 'Neural Ninjas',
     college: 'NIT Trichy',
