@@ -1354,7 +1354,7 @@ test('37. WhatsApp venue allocation message construction matching Apps Script Ve
   assert.ok(msgKnown.includes('VENUE ALLOCATION'), 'Must have venue allocation section');
   assert.ok(msgKnown.includes('Venue: CS-1'));
   assert.ok(msgKnown.includes('Floor: Ground Floor'));
-  assert.ok(msgKnown.includes('Please proceed to your allotted venue.'));
+  assert.equal(msgKnown.includes('Please proceed to your allotted venue.'), false, 'Must not include proceed to venue');
   assert.ok(msgKnown.includes('LAKSHYA 2026 Organizing Team\nSJBIT, Bengaluru'));
 
   // Unknown team ID fallback
@@ -1404,7 +1404,7 @@ test('39. Verified venue allotment across all labs and floors for WhatsApp after
     assert.ok(msg.includes(`Team ID: ${tc.id}`));
     assert.ok(msg.includes(`Venue: ${tc.venue}`));
     assert.ok(msg.includes(`Floor: ${tc.floor}`));
-    assert.ok(msg.includes('Please proceed to your allotted venue.'));
+    assert.equal(msg.includes('Please proceed to your allotted venue.'), false);
   }
 });
 

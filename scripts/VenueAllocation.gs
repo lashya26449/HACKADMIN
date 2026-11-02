@@ -136,7 +136,6 @@ function buildAttendanceWhatsAppMessage_(teamName, teamId, venueInfo) {
     "VENUE ALLOCATION\n" +
     "Venue: " + venue + "\n" +
     "Floor: " + floor + "\n\n" +
-    "Please proceed to your allotted venue.\n\n" +
     "Regards,\n" +
     "LAKSHYA 2026 Organizing Team\n" +
     "SJBIT, Bengaluru";
@@ -249,7 +248,6 @@ function processAttendanceEmail_(sheet, rowNumber) {
       "Team ID: " + teamId + "\n" +
       "Team Name: " + teamName + "\n" +
       "Team Lead: " + leadName + "\n\n" +
-      "Please proceed to your allotted venue. If you need help, approach the event organizers.\n\n" +
       "Regards,\n" +
       "Team LAKSHYA 2026\n" +
       "SJBIT, Bengaluru";
@@ -269,7 +267,6 @@ function processAttendanceEmail_(sheet, rowNumber) {
       '<p><strong>Team ID:</strong> ' + escapeHtml_(teamId) + '<br>' +
       '<strong>Team Name:</strong> ' + escapeHtml_(teamName) + '<br>' +
       '<strong>Team Lead:</strong> ' + escapeHtml_(leadName) + '</p>' +
-      '<p>Please proceed to your allotted venue. For help, approach the event organizers.</p>' +
       '<hr><p>Regards,<br><strong>Team LAKSHYA 2026</strong><br>SJBIT, Bengaluru</p>' +
       '</div>';
 

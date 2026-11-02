@@ -136,7 +136,6 @@ export function buildAttendanceWhatsAppMessage(
     `VENUE ALLOCATION\n` +
     `Venue: ${venue}\n` +
     `Floor: ${floor}\n\n` +
-    `Please proceed to your allotted venue.\n\n` +
     `Regards,\n` +
     `LAKSHYA 2026 Organizing Team\n` +
     `SJBIT, Bengaluru`
