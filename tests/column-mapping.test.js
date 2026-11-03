@@ -1177,14 +1177,11 @@ test('32. WhatsApp check-in message construction and venue verification matching
     teamId: 'LAK-005',
   });
 
-  assert.ok(msg.includes('Hello CyberKnights Team!'), 'Must greet team name');
-  assert.ok(msg.includes('Your attendance for LAKSHYA 2026 has been confirmed.'));
-  assert.ok(msg.includes('Team Name: CyberKnights'));
-  assert.ok(msg.includes('Team ID: LAK-005'));
-  assert.ok(msg.includes('Venue: CS-1'), 'Must state exact allocated venue CS-1 for LAK-005');
-  assert.ok(msg.includes('Floor: Ground Floor'), 'Must state exact allocated floor Ground Floor for LAK-005');
-  assert.equal(msg.includes('Please proceed to your allotted venue.'), false, 'Must not include proceed to venue');
-  assert.ok(msg.includes('LAKSHYA 2026 Organizing Team\nSJBIT, Bengaluru'));
+  assert.ok(msg.includes('🎯 *LAKSHYA 2026*'), 'Must have header');
+  assert.ok(msg.includes('✅ Attendance marked PRESENT!'));
+  assert.ok(msg.includes('Team: *CyberKnights (LAK-005)*'));
+  assert.ok(msg.includes('📍 *Lab Allotted: CS-1 – Ground Floor*'));
+  assert.ok(msg.includes('🌟 *All the best!*'));
 });
 
 test('33. Server API check-in: mark and undo action contracts and RBAC guards', () => {
@@ -1298,12 +1295,14 @@ test('36. VenueAllocation module mapping verification: 75 teams mapped, verified
 
   // First Floor
   assert.deepEqual(getLakshyaVenue('LAK-031'), { venue: 'VTU RESEARCH', floor: 'First Floor' });
-  assert.deepEqual(getLakshyaVenue('LAK-071'), { venue: 'VTU RESEARCH', floor: 'First Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-070'), { venue: 'VTU RESEARCH', floor: 'First Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-071'), { venue: 'LINUS TORVALDS', floor: 'Fourth Floor' });
 
   // Second Floor
   assert.deepEqual(getLakshyaVenue('LAK-022'), { venue: 'CV RAMAN', floor: 'Second Floor' });
   assert.deepEqual(getLakshyaVenue('LAK-068'), { venue: 'CV RAMAN', floor: 'Second Floor' });
   assert.deepEqual(getLakshyaVenue('LAK-016'), { venue: 'THOMAS ALVA EDISON', floor: 'Second Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-044'), { venue: 'THOMAS ALVA EDISON', floor: 'Second Floor' });
 
   // Third Floor
   assert.deepEqual(getLakshyaVenue('LAK-032'), { venue: 'EDWARD LAB', floor: 'Third Floor' });
@@ -1311,8 +1310,9 @@ test('36. VenueAllocation module mapping verification: 75 teams mapped, verified
   assert.deepEqual(getLakshyaVenue('LAK-059'), { venue: 'TIM BERNERS', floor: 'Third Floor' });
 
   // Fourth Floor
-  assert.deepEqual(getLakshyaVenue('LAK-073'), { venue: 'ALLOTMENT PENDING', floor: 'Fourth Floor' });
-  assert.deepEqual(getLakshyaVenue('LAK-076'), { venue: 'ALLOTMENT PENDING', floor: 'Fourth Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-062'), { venue: 'LINUS TORVALDS', floor: 'Fourth Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-073'), { venue: 'LINUS TORVALDS', floor: 'Fourth Floor' });
+  assert.deepEqual(getLakshyaVenue('LAK-076'), { venue: 'LINUS TORVALDS', floor: 'Fourth Floor' });
 
   // Unknown ID handling
   assert.equal(getLakshyaVenue('LAK-999'), null);
@@ -1325,21 +1325,16 @@ test('37. WhatsApp venue allocation message construction matching Apps Script Ve
 
   // Known team ID
   const msgKnown = buildAttendanceWhatsAppMessage('CyberKnights', 'LAK-005');
-  assert.ok(msgKnown.includes('Hello CyberKnights Team!'), 'Must greet team');
-  assert.ok(msgKnown.includes('Your attendance for LAKSHYA 2026 has been confirmed.'), 'Must state attendance confirmed');
-  assert.ok(msgKnown.includes('TEAM DETAILS'), 'Must have team details section');
-  assert.ok(msgKnown.includes('Team Name: CyberKnights'));
-  assert.ok(msgKnown.includes('Team ID: LAK-005'));
-  assert.ok(msgKnown.includes('VENUE ALLOCATION'), 'Must have venue allocation section');
-  assert.ok(msgKnown.includes('Venue: CS-1'));
-  assert.ok(msgKnown.includes('Floor: Ground Floor'));
-  assert.equal(msgKnown.includes('Please proceed to your allotted venue.'), false, 'Must not include proceed to venue');
-  assert.ok(msgKnown.includes('LAKSHYA 2026 Organizing Team\nSJBIT, Bengaluru'));
+  assert.ok(msgKnown.includes('🎯 *LAKSHYA 2026*'));
+  assert.ok(msgKnown.includes('✅ Attendance marked PRESENT!'));
+  assert.ok(msgKnown.includes('Team: *CyberKnights (LAK-005)*'));
+  assert.ok(msgKnown.includes('📍 *Lab Allotted: CS-1 – Ground Floor*'));
+  assert.ok(msgKnown.includes('🌟 *All the best!*'));
 
   // Unknown team ID fallback
   const msgUnknown = buildAttendanceWhatsAppMessage('UnknownSquad', 'LAK-999');
-  assert.ok(msgUnknown.includes('Venue: ALLOTMENT PENDING'));
-  assert.ok(msgUnknown.includes('Floor: Contact Organizers Desk'));
+  assert.ok(msgUnknown.includes('📍 *Lab Allotted: ALLOTMENT PENDING – Contact Organizers Desk*'));
+  assert.ok(msgUnknown.includes('🌟 *All the best!*'));
 });
 
 test('38. Team 001 / LAK-001 is recognized as invalid and has no venue allotment', () => {
@@ -1351,8 +1346,7 @@ test('38. Team 001 / LAK-001 is recognized as invalid and has no venue allotment
   assert.equal(getLakshyaVenue('lak-001'), null);
 
   const msg001 = buildAttendanceWhatsAppMessage('TestTeam', 'LAK-001');
-  assert.ok(msg001.includes('Venue: ALLOTMENT PENDING'));
-  assert.ok(msg001.includes('Floor: Contact Organizers Desk'));
+  assert.ok(msg001.includes('📍 *Lab Allotted: ALLOTMENT PENDING – Contact Organizers Desk*'));
 });
 
 test('39. Verified venue allotment across all labs and floors for WhatsApp after marking present', () => {
@@ -1364,11 +1358,14 @@ test('39. Verified venue allotment across all labs and floors for WhatsApp after
     { id: 'LAK-029', name: 'ST Pioneers', venue: 'ST LAB', floor: 'Ground Floor' },
     { id: 'LAK-031', name: 'Research Hub', venue: 'VTU RESEARCH', floor: 'First Floor' },
     { id: 'LAK-016', name: 'Edison Club', venue: 'THOMAS ALVA EDISON', floor: 'Second Floor' },
+    { id: 'LAK-044', name: 'Edison Extended', venue: 'THOMAS ALVA EDISON', floor: 'Second Floor' },
     { id: 'LAK-022', name: 'Raman Labs', venue: 'CV RAMAN', floor: 'Second Floor' },
     { id: 'LAK-032', name: 'Edward Squad', venue: 'EDWARD LAB', floor: 'Third Floor' },
     { id: 'LAK-052', name: 'Math Geniuses', venue: 'RAMANUJACHARYA LAB', floor: 'Third Floor' },
     { id: 'LAK-059', name: 'Web Creators', venue: 'TIM BERNERS', floor: 'Third Floor' },
-    { id: 'LAK-073', name: 'Fourth Floor Team', venue: 'ALLOTMENT PENDING', floor: 'Fourth Floor' },
+    { id: 'LAK-062', name: 'Linus Alpha', venue: 'LINUS TORVALDS', floor: 'Fourth Floor' },
+    { id: 'LAK-071', name: 'Linus Beta', venue: 'LINUS TORVALDS', floor: 'Fourth Floor' },
+    { id: 'LAK-073', name: 'Linus Team', venue: 'LINUS TORVALDS', floor: 'Fourth Floor' },
   ];
 
   for (const tc of testCases) {
@@ -1377,13 +1374,11 @@ test('39. Verified venue allotment across all labs and floors for WhatsApp after
     assert.equal(venueInfo.floor, tc.floor);
 
     const msg = buildAttendanceWhatsAppMessage(tc.name, tc.id);
-    assert.ok(msg.includes(`Hello ${tc.name} Team!`));
-    assert.ok(msg.includes('Your attendance for LAKSHYA 2026 has been confirmed.'));
-    assert.ok(msg.includes(`Team Name: ${tc.name}`));
-    assert.ok(msg.includes(`Team ID: ${tc.id}`));
-    assert.ok(msg.includes(`Venue: ${tc.venue}`));
-    assert.ok(msg.includes(`Floor: ${tc.floor}`));
-    assert.equal(msg.includes('Please proceed to your allotted venue.'), false);
+    assert.ok(msg.includes('🎯 *LAKSHYA 2026*'));
+    assert.ok(msg.includes('✅ Attendance marked PRESENT!'));
+    assert.ok(msg.includes(`Team: *${tc.name} (${tc.id})*`));
+    assert.ok(msg.includes(`📍 *Lab Allotted: ${tc.venue} – ${tc.floor}*`));
+    assert.ok(msg.includes('🌟 *All the best!*'));
   }
 });
 

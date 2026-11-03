@@ -40,8 +40,8 @@ const LAKSHYA_VENUE_ALLOTMENT = Object.freeze({
   "LAK-034": { venue: "ST LAB", floor: "Ground Floor" },
   "LAK-036": { venue: "ST LAB", floor: "Ground Floor" },
   "LAK-038": { venue: "ST LAB", floor: "Ground Floor" },
-  "LAK-044": { venue: "ST LAB", floor: "Ground Floor" },
-  "LAK-062": { venue: "ST LAB", floor: "Ground Floor" },
+  "LAK-044": { venue: "THOMAS ALVA EDISON", floor: "Second Floor" },
+  "LAK-062": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
 
   // First floor
   "LAK-031": { venue: "VTU RESEARCH", floor: "First Floor" },
@@ -51,7 +51,7 @@ const LAKSHYA_VENUE_ALLOTMENT = Object.freeze({
   "LAK-064": { venue: "VTU RESEARCH", floor: "First Floor" },
   "LAK-066": { venue: "VTU RESEARCH", floor: "First Floor" },
   "LAK-070": { venue: "VTU RESEARCH", floor: "First Floor" },
-  "LAK-071": { venue: "VTU RESEARCH", floor: "First Floor" },
+  "LAK-071": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
 
   // Second floor
   "LAK-022": { venue: "CV RAMAN", floor: "Second Floor" },
@@ -101,11 +101,11 @@ const LAKSHYA_VENUE_ALLOTMENT = Object.freeze({
   "LAK-069": { venue: "TIM BERNERS", floor: "Third Floor" },
   "LAK-072": { venue: "TIM BERNERS", floor: "Third Floor" },
 
-  // Fourth floor — temporary label; update venue name when confirmed.
-  "LAK-073": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" },
-  "LAK-074": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" },
-  "LAK-075": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" },
-  "LAK-076": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" }
+  // LINUS TORVALDS — venue confirmed in the latest master sheet; floor still needs confirmation.
+  "LAK-073": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
+  "LAK-074": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
+  "LAK-075": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
+  "LAK-076": { venue: "LINUS TORVALDS", floor: "Fourth Floor" }
 });
 
 
@@ -125,20 +125,16 @@ function getLakshyaVenue_(teamId) {
  * automatically.
  */
 function buildAttendanceWhatsAppMessage_(teamName, teamId, venueInfo) {
-  const venue = venueInfo ? venueInfo.venue : "ALLOTMENT PENDING";
-  const floor = venueInfo ? venueInfo.floor : "Contact Organizers Desk";
+  const v = venueInfo || getLakshyaVenue_(teamId);
+  const venue = v ? v.venue : "ALLOTMENT PENDING";
+  const floor = v ? v.floor : "Contact Organizers Desk";
 
-  return "Hello " + teamName + " Team!\n\n" +
-    "Your attendance for LAKSHYA 2026 has been confirmed.\n\n" +
-    "TEAM DETAILS\n" +
-    "Team Name: " + teamName + "\n" +
-    "Team ID: " + teamId + "\n\n" +
-    "VENUE ALLOCATION\n" +
-    "Venue: " + venue + "\n" +
-    "Floor: " + floor + "\n\n" +
-    "Regards,\n" +
-    "LAKSHYA 2026 Organizing Team\n" +
-    "SJBIT, Bengaluru";
+  return "🎯 *LAKSHYA 2026*\n\n" +
+    "✅ Attendance marked PRESENT!\n\n" +
+    "Team: *" + teamName + " (" + teamId + ")*\n" +
+    "📍 *Lab Allotted: " + venue +
+    " – " + floor + "*\n\n" +
+    "🌟 *All the best!*";
 }
 
 
@@ -239,35 +235,25 @@ function processAttendanceEmail_(sheet, rowNumber) {
       "LAKSHYA 2026 | Venue Allocation — " + teamId;
 
     const body =
-      "Hello " + teamName + " team,\n\n" +
-      "Your attendance for LAKSHYA 2026 has been marked as PRESENT.\n\n" +
-      "VENUE ALLOCATION\n" +
-      "Venue: " + venueInfo.venue + "\n" +
-      "Floor: " + venueInfo.floor + "\n\n" +
-      "TEAM DETAILS\n" +
-      "Team ID: " + teamId + "\n" +
-      "Team Name: " + teamName + "\n" +
-      "Team Lead: " + leadName + "\n\n" +
-      "Regards,\n" +
-      "Team LAKSHYA 2026\n" +
-      "SJBIT, Bengaluru";
+  "Your attendance is marked as PRESENT.\n\n" +
+  "Team: " + teamName + " (" + teamId + ")\n" +
+  "Lab Allotted: " + venueInfo.venue +
+  ", " + venueInfo.floor + "\n\n" +
+  "All the best!\n\n" +
+  "Team LAKSHYA 2026";
 
     const htmlBody =
-      '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;background:#0b0f19;color:#f1f5f9;border-radius:12px;">' +
-      '<h1 style="margin-top:0;color:#fff;">LAKSHYA 2026</h1>' +
-      '<p style="color:#34d399;font-weight:bold;">✓ ATTENDANCE CONFIRMED — PRESENT</p>' +
-      '<p>Hello <strong>' + escapeHtml_(teamName) + '</strong>,</p>' +
-      '<p>Your attendance has been recorded successfully.</p>' +
-      '<div style="padding:18px;background:#1e1b4b;border-left:4px solid #8b5cf6;border-radius:8px;">' +
-      '<h3 style="margin-top:0;color:#c4b5fd;">YOUR VENUE ALLOCATION</h3>' +
-      '<p style="font-size:20px;margin-bottom:8px;"><strong>' + escapeHtml_(venueInfo.venue) + '</strong></p>' +
-      '<p style="font-size:16px;margin-top:0;"><strong>Floor:</strong> ' + escapeHtml_(venueInfo.floor) + '</p>' +
-      '</div>' +
-      '<h3>Team Details</h3>' +
-      '<p><strong>Team ID:</strong> ' + escapeHtml_(teamId) + '<br>' +
-      '<strong>Team Name:</strong> ' + escapeHtml_(teamName) + '<br>' +
-      '<strong>Team Lead:</strong> ' + escapeHtml_(leadName) + '</p>' +
-      '<hr><p>Regards,<br><strong>Team LAKSHYA 2026</strong><br>SJBIT, Bengaluru</p>' +
+  '<div style="font-family:Arial,sans-serif;padding:24px;color:#222;">' +
+  '<h2>LAKSHYA 2026</h2>' +
+  '<p>✅ Your attendance is marked as <b>PRESENT</b>.</p>' +
+  '<p><b>Team:</b> ' + escapeHtml_(teamName) +
+  ' (' + escapeHtml_(teamId) + ')</p>' +
+  '<p><b>Lab Allotted:</b> ' +
+  escapeHtml_(venueInfo.venue) + ', ' +
+  escapeHtml_(venueInfo.floor) + '</p>' +
+  '<p><b>All the best!</b></p>' +
+  '<p>Team LAKSHYA 2026</p>' +
+  '<hr><p>Regards,<br><strong>Team LAKSHYA 2026</strong><br>SJBIT, Bengaluru</p>' +
       '</div>';
 
     // Send the email first. Mark SENT only after MailApp accepts it.
@@ -318,7 +304,7 @@ function processAttendanceEmail_(sheet, rowNumber) {
 
 /**
  * Optional manual verification. Run this function from Apps Script to log
- * all mapped team IDs and confirm the mapping count is 75.
+ * all mapped team IDs and confirm the mapping count is 75. Linus Torvalds floor is intentionally marked for confirmation.
  * It does not send emails or modify the spreadsheet.
  */
 function verifyLakshyaVenueMapping() {
@@ -335,4 +321,38 @@ function verifyLakshyaVenueMapping() {
   }
 
   Logger.log("Venue mapping verification passed.");
+}
+
+
+/**
+ * BULK EMAIL DISPATCH HELPER
+ * Pass an array of Team IDs (or call without arguments to process all marked present teams).
+ * Example: sendBulkAttendanceEmails(['LAK-002', 'LAK-005', 'LAK-010'])
+ */
+function sendBulkAttendanceEmails(targetTeamIds) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const columns = getColumns_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const targetSet = targetTeamIds && targetTeamIds.length > 0
+    ? new Set(targetTeamIds.map(function(id) { return String(id).trim().toUpperCase(); }))
+    : null;
+
+  let sentCount = 0;
+  for (let r = 2; r <= lastRow; r++) {
+    const teamId = String(sheet.getRange(r, columns.teamId).getDisplayValue() || "").trim().toUpperCase();
+    if (!teamId) continue;
+
+    if (targetSet && !targetSet.has(teamId)) continue;
+
+    const emailStatus = String(sheet.getRange(r, columns.attendanceEmail).getDisplayValue() || "").trim().toUpperCase();
+    if (emailStatus === "SENT") continue;
+
+    processAttendanceEmail_(sheet, r);
+    sentCount++;
+  }
+
+  Logger.log("Bulk attendance emails dispatched for " + sentCount + " teams.");
+  return sentCount;
 }

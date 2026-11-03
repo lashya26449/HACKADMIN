@@ -34,8 +34,8 @@ export const LAKSHYA_VENUE_ALLOTMENT: Readonly<Record<string, VenueInfo>> = Obje
   "LAK-034": { venue: "ST LAB", floor: "Ground Floor" },
   "LAK-036": { venue: "ST LAB", floor: "Ground Floor" },
   "LAK-038": { venue: "ST LAB", floor: "Ground Floor" },
-  "LAK-044": { venue: "ST LAB", floor: "Ground Floor" },
-  "LAK-062": { venue: "ST LAB", floor: "Ground Floor" },
+  "LAK-044": { venue: "THOMAS ALVA EDISON", floor: "Second Floor" },
+  "LAK-062": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
 
   // First floor
   "LAK-031": { venue: "VTU RESEARCH", floor: "First Floor" },
@@ -45,7 +45,7 @@ export const LAKSHYA_VENUE_ALLOTMENT: Readonly<Record<string, VenueInfo>> = Obje
   "LAK-064": { venue: "VTU RESEARCH", floor: "First Floor" },
   "LAK-066": { venue: "VTU RESEARCH", floor: "First Floor" },
   "LAK-070": { venue: "VTU RESEARCH", floor: "First Floor" },
-  "LAK-071": { venue: "VTU RESEARCH", floor: "First Floor" },
+  "LAK-071": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
 
   // Second floor
   "LAK-022": { venue: "CV RAMAN", floor: "Second Floor" },
@@ -95,11 +95,11 @@ export const LAKSHYA_VENUE_ALLOTMENT: Readonly<Record<string, VenueInfo>> = Obje
   "LAK-069": { venue: "TIM BERNERS", floor: "Third Floor" },
   "LAK-072": { venue: "TIM BERNERS", floor: "Third Floor" },
 
-  // Fourth floor — temporary label; update venue name when confirmed.
-  "LAK-073": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" },
-  "LAK-074": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" },
-  "LAK-075": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" },
-  "LAK-076": { venue: "ALLOTMENT PENDING", floor: "Fourth Floor" }
+  // Fourth floor — LINUS TORVALDS
+  "LAK-073": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
+  "LAK-074": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
+  "LAK-075": { venue: "LINUS TORVALDS", floor: "Fourth Floor" },
+  "LAK-076": { venue: "LINUS TORVALDS", floor: "Fourth Floor" }
 });
 
 /**
@@ -128,16 +128,10 @@ export function buildAttendanceWhatsAppMessage(
   const id = teamId?.trim() || "Unassigned";
 
   return (
-    `Hello ${name} Team!\n\n` +
-    `Your attendance for LAKSHYA 2026 has been confirmed.\n\n` +
-    `TEAM DETAILS\n` +
-    `Team Name: ${name}\n` +
-    `Team ID: ${id}\n\n` +
-    `VENUE ALLOCATION\n` +
-    `Venue: ${venue}\n` +
-    `Floor: ${floor}\n\n` +
-    `Regards,\n` +
-    `LAKSHYA 2026 Organizing Team\n` +
-    `SJBIT, Bengaluru`
+    `🎯 *LAKSHYA 2026*\n\n` +
+    `✅ Attendance marked PRESENT!\n\n` +
+    `Team: *${name} (${id})*\n` +
+    `📍 *Lab Allotted: ${venue} – ${floor}*\n\n` +
+    `🌟 *All the best!*`
   );
 }
