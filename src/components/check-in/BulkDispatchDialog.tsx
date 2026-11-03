@@ -228,20 +228,20 @@ export function BulkDispatchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[#0D0D0D] border border-white/15 text-white shadow-2xl rounded-3xl p-6 sm:p-7 max-h-[92vh] overflow-y-auto font-sans">
+      <DialogContent className="max-w-2xl bg-[#0D0D0D] border border-white/15 text-white shadow-2xl rounded-lg p-6 sm:p-7 max-h-[92vh] overflow-y-auto font-sans">
         
         {/* MODAL HEADER */}
         <DialogHeader className="border-b border-white/10 pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+            <span className="p-2 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400">
               <Zap className="h-5 w-5" />
             </span>
             <div>
               <DialogTitle className="text-lg sm:text-xl font-black text-white tracking-tight">
                 Bulk Dispatch — Email &amp; WhatsApp Queue
               </DialogTitle>
-              <DialogDescription className="text-xs text-[#808080] mt-0.5">
-                Enter team IDs or ranges &bull; Automatically triggers official venue emails then launches WhatsApp queue
+              <DialogDescription className="sr-only">
+                Bulk Dispatch dialog for attendance emails and WhatsApp queue
               </DialogDescription>
             </div>
           </div>
@@ -259,42 +259,42 @@ export function BulkDispatchDialog({
                 <button
                   type="button"
                   onClick={() => applyPreset('ground')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
+                  className="px-2.5 py-1 text-xs rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
                 >
                   Ground (CS-1, CS-2, ST)
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('first')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
+                  className="px-2.5 py-1 text-xs rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
                 >
                   1st Floor (VTU)
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('second')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
+                  className="px-2.5 py-1 text-xs rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
                 >
                   2nd Floor (CV Raman / Edison)
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('third')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
+                  className="px-2.5 py-1 text-xs rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
                 >
                   3rd Floor (Edward / Ramanujacharya / Tim)
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('fourth')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
+                  className="px-2.5 py-1 text-xs rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-300 font-medium transition-all"
                 >
                   4th Floor (Linus Torvalds)
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('present')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold transition-all"
+                  className="px-2.5 py-1 text-xs rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold transition-all"
                 >
                   All Checked In
                 </button>
@@ -314,12 +314,12 @@ export function BulkDispatchDialog({
                 onChange={e => setInputVal(e.target.value)}
                 rows={3}
                 placeholder="Type or paste IDs (e.g. 2-8, LAK-009 to LAK-015, 29, 33)..."
-                className="w-full rounded-2xl bg-white/[0.04] border border-white/15 p-3.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 font-mono"
+                className="w-full rounded-md bg-white/[0.04] border border-white/15 p-3.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 font-mono"
               />
             </div>
 
             {/* Live Matched Teams Preview */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+            <div className="rounded-md border border-white/10 bg-white/[0.02] p-4 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-neutral-300 flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-emerald-400" />
@@ -337,7 +337,7 @@ export function BulkDispatchDialog({
                     return (
                       <span
                         key={t.teamId}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-white/[0.06] border border-white/15 text-white font-mono"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-white/[0.06] border border-white/15 text-white font-mono"
                         title={`${t.teamName} · ${venue ? `${venue.venue} (${venue.floor})` : 'Pending'}`}
                       >
                         <span className="font-bold text-amber-300">{t.teamId}</span>
@@ -358,29 +358,21 @@ export function BulkDispatchDialog({
               )}
             </div>
 
-            {/* Workflow Notice */}
-            <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/25 flex items-start gap-2.5 text-xs text-purple-200">
-              <Mail className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
-              <span>
-                <strong>Workflow:</strong> Clicking below triggers official venue emails via Google Sheets, then opens the sequential WhatsApp Desktop Queue.
-              </span>
-            </div>
-
             <DialogFooter className="gap-2 sm:gap-0 pt-2">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white"
+                className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white rounded-md"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleProceedToEmailsAndQueue}
                 disabled={targetTeams.length === 0}
-                className="bg-amber-600 hover:bg-amber-500 text-black font-black shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all"
+                className="bg-amber-600 hover:bg-amber-500 text-black font-black shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all rounded-md"
               >
                 <Zap className="h-4 w-4 mr-1.5" />
-                1. Trigger Emails &amp; Start WhatsApp Queue ({targetTeams.length})
+                Trigger Emails &amp; Start WhatsApp Queue ({targetTeams.length})
               </Button>
             </DialogFooter>
           </div>
@@ -420,11 +412,11 @@ export function BulkDispatchDialog({
             </div>
 
             {/* Active Team Card */}
-            <div className="rounded-3xl border border-white/20 bg-white/[0.04] backdrop-blur-2xl p-5 sm:p-6 space-y-4 shadow-xl">
+            <div className="rounded-lg border border-white/15 bg-white/[0.03] p-5 sm:p-6 space-y-4 shadow-xl">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                    <span className="font-mono text-xs sm:text-sm font-black px-2.5 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300">
                       {currentTeam.teamId}
                     </span>
                     <span className="text-xs text-[#808080] truncate">{currentTeam.college}</span>
@@ -442,7 +434,7 @@ export function BulkDispatchDialog({
 
                 {/* Allotted Room Badge */}
                 {currentVenue && (
-                  <div className="text-right shrink-0 p-3 rounded-2xl bg-white/[0.05] border border-white/15">
+                  <div className="text-right shrink-0 p-3 rounded-md bg-white/[0.05] border border-white/15">
                     <span className="text-[10px] uppercase font-mono text-[#808080] block">Allotted Lab</span>
                     <span className="text-base sm:text-lg font-black text-white font-mono block">
                       {currentVenue.venue}
@@ -457,7 +449,7 @@ export function BulkDispatchDialog({
                 <span className="text-[10px] font-semibold text-[#707070] uppercase tracking-wider block">
                   Dispatched WhatsApp Message:
                 </span>
-                <div className="p-3 rounded-xl bg-black/60 border border-white/10 font-mono text-xs text-neutral-200 whitespace-pre-wrap leading-relaxed select-all">
+                <div className="p-3 rounded-md bg-black/60 border border-white/10 font-mono text-xs text-neutral-200 whitespace-pre-wrap leading-relaxed select-all">
                   {currentMessage}
                 </div>
               </div>
@@ -471,7 +463,7 @@ export function BulkDispatchDialog({
                   size="sm"
                   onClick={handlePrevious}
                   disabled={currentIndex === 0}
-                  className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white"
+                  className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white rounded-md"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Previous
@@ -480,7 +472,7 @@ export function BulkDispatchDialog({
                   variant="outline"
                   size="sm"
                   onClick={handleSkip}
-                  className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white"
+                  className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white rounded-md"
                 >
                   Skip
                 </Button>
@@ -490,7 +482,7 @@ export function BulkDispatchDialog({
               <Button
                 onClick={handleDispatchCurrent}
                 disabled={!currentPhone}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black shadow-[0_0_20px_rgba(16,185,129,0.35)] py-5 px-6 text-sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black shadow-[0_0_20px_rgba(16,185,129,0.35)] py-5 px-6 text-sm rounded-md"
               >
                 <Smartphone className="h-4 w-4 mr-2" />
                 Open WhatsApp &amp; Next (Enter ↵)
@@ -503,8 +495,8 @@ export function BulkDispatchDialog({
         {/* STEP: FINISHED */}
         {step === 'finished' && (
           <div className="py-12 text-center space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400">
-              <CheckCircle2 className="h-8 w-8" />
+            <div className="h-14 w-14 rounded-md bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
             <div className="space-y-1">
               <h3 className="text-xl font-black text-white">Bulk Dispatch Complete!</h3>
@@ -517,14 +509,14 @@ export function BulkDispatchDialog({
               <Button
                 variant="outline"
                 onClick={() => setStep('input')}
-                className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white"
+                className="border-white/15 bg-white/[0.04] text-neutral-300 hover:text-white rounded-md"
               >
                 <RotateCcw className="h-4 w-4 mr-1.5" />
                 Dispatch Another Batch
               </Button>
               <Button
                 onClick={() => onOpenChange(false)}
-                className="bg-white text-black font-bold hover:bg-neutral-200"
+                className="bg-white text-black font-bold hover:bg-neutral-200 rounded-md"
               >
                 Done
               </Button>
