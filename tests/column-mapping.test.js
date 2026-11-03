@@ -1382,6 +1382,71 @@ test('39. Verified venue allotment across all labs and floors for WhatsApp after
   }
 });
 
+test('40. Bulk dispatch range and ID parser correctly parses ranges, singles, and excludes LAK-001', () => {
+  // Test parsing logic identically matching src/lib/bulk-dispatcher.ts
+  function parseTeamIdInput(input) {
+    if (!input || !input.trim()) return [];
+    const rawTokens = input.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+    const resultIds = new Set();
+
+    for (const token of rawTokens) {
+      const rangeMatch = token.match(/^(?:LAK-)?0*(\d+)\s*(?:-|to|\.\.)\s*(?:LAK-)?0*(\d+)$/i);
+      if (rangeMatch) {
+        const start = parseInt(rangeMatch[1], 10);
+        const end = parseInt(rangeMatch[2], 10);
+        const min = Math.min(start, end);
+        const max = Math.max(start, end);
+        for (let n = min; n <= max; n++) {
+          if (n === 1) continue;
+          resultIds.add(`LAK-${String(n).padStart(3, '0')}`);
+        }
+        continue;
+      }
+
+      const numMatch = token.match(/^0*(\d+)$/);
+      if (numMatch) {
+        const n = parseInt(numMatch[1], 10);
+        if (n === 1) continue;
+        resultIds.add(`LAK-${String(n).padStart(3, '0')}`);
+        continue;
+      }
+
+      const upper = token.toUpperCase();
+      if (upper.startsWith('LAK-')) {
+        const numPart = upper.replace('LAK-', '').trim();
+        const n = parseInt(numPart, 10);
+        if (!isNaN(n)) {
+          if (n === 1) continue;
+          resultIds.add(`LAK-${String(n).padStart(3, '0')}`);
+        } else {
+          resultIds.add(upper);
+        }
+        continue;
+      }
+    }
+
+    return Array.from(resultIds).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }
+
+  // Range 1-5 (must exclude 001)
+  const r1 = parseTeamIdInput('1-5');
+  assert.deepEqual(r1, ['LAK-002', 'LAK-003', 'LAK-004', 'LAK-005']);
+
+  // Text range: LAK-016 to LAK-020
+  const r2 = parseTeamIdInput('LAK-016 to LAK-020');
+  assert.deepEqual(r2, ['LAK-016', 'LAK-017', 'LAK-018', 'LAK-019', 'LAK-020']);
+
+  // Mixed comma, spaces, ranges, and individual IDs
+  const r3 = parseTeamIdInput('2, 009, 16-18, LAK-044, 1');
+  assert.deepEqual(r3, ['LAK-002', 'LAK-009', 'LAK-016', 'LAK-017', 'LAK-018', 'LAK-044']);
+
+  // Range using ".." dots
+  const r4 = parseTeamIdInput('29..33');
+  assert.deepEqual(r4, ['LAK-029', 'LAK-030', 'LAK-031', 'LAK-032', 'LAK-033']);
+});
+
 
 
 

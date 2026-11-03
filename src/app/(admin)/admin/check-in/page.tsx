@@ -13,6 +13,7 @@ import { QuickScanBar } from '@/components/check-in/QuickScanBar';
 import { KeyboardShortcutsHelpDialog } from '@/components/shortcuts/KeyboardShortcutsHelpDialog';
 import { QuickSearchDialog } from '@/components/shortcuts/QuickSearchDialog';
 import { ExportOptionsDialog } from '@/components/export/ExportOptionsDialog';
+import { BulkDispatchDialog } from '@/components/check-in/BulkDispatchDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { hasPermission } from '@/lib/firebase/auth-helpers';
 import { trimTeamId, generateIdempotencyKey } from '@/lib/utils';
@@ -146,6 +147,7 @@ export default function CheckInPage() {
   const [quickSearchOpen, setQuickSearchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [bulkDispatchOpen, setBulkDispatchOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -837,6 +839,16 @@ export default function CheckInPage() {
               <span>Trigger Desktop App</span>
             </button>
 
+            {/* Bulk Dispatch Button (Emails & WhatsApp Queue) */}
+            <button
+              onClick={() => setBulkDispatchOpen(true)}
+              title="Bulk dispatch: Trigger official venue allocation emails & sequential WhatsApp queue (supports ranges like 2-10, LAK-016 to LAK-021, presets)"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-950/25 text-amber-300 hover:bg-amber-900/40 hover:border-amber-400 transition-all cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.18)] active:scale-95"
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-400 fill-amber-400/20" />
+              <span>Bulk Dispatch</span>
+            </button>
+
             {/* WhatsApp Auto-Popup Switch */}
             <button
               onClick={toggleAutoOpenWhatsApp}
@@ -1072,6 +1084,15 @@ export default function CheckInPage() {
         open={exportOpen}
         onOpenChange={setExportOpen}
         canExport={canExport}
+      />
+
+      {/* BULK DISPATCH MODAL (Emails + WhatsApp Queue) */}
+      <BulkDispatchDialog
+        open={bulkDispatchOpen}
+        onOpenChange={setBulkDispatchOpen}
+        teams={teams}
+        onRefreshTeams={refreshTeams}
+        getIdToken={getIdToken}
       />
     </div>
   );
